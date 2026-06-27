@@ -1,0 +1,12 @@
+data/raw/
+data/splits/
+data/preprocessed/
+data/augmented/
+results/logs/
+results/models/
+results/predictions/
+__pycache__/
+*.pyc
+.env
+.venv/
+vncorenlp/

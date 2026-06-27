@@ -1,0 +1,10 @@
+model_name: "vinai/phobert-base"
+max_length: 128
+batch_size: 16
+eval_batch_size: 32
+learning_rate: 2e-5
+weight_decay: 0.01
+num_epochs: 10
+warmup_ratio: 0.1
+early_stopping_patience: 3
+metric_for_best_model: "macro_f1"

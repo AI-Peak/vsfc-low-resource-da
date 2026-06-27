@@ -1,0 +1,15 @@
+seed: 42
+device: "cuda"
+data:
+  dataset_name: "uitnlp/vietnamese_students_feedback"
+  task: "sentiment"
+  num_labels: 3
+  label_map:
+    0: "negative"
+    1: "neutral"
+    2: "positive"
+paths:
+  raw: "data/raw"
+  splits: "data/splits"
+  augmented: "data/augmented"
+  results: "results"

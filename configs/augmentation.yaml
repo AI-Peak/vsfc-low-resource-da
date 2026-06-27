@@ -1,0 +1,19 @@
+methods:
+  - none
+  - eda
+  - llm_paraphrase_raw
+  - llm_paraphrase_filtered
+eda:
+  alpha_sr: 0.1
+  alpha_ri: 0.1
+  alpha_rs: 0.1
+  p_rd: 0.1
+  num_aug: 1
+llm:
+  model: "gemini-2.5-flash-lite"
+  num_aug: 1
+  temperature: 0.7
+  max_retries: 3
+filter:
+  judge_model_path: "results/judge/best_model"
+  confidence_threshold: 0.70
