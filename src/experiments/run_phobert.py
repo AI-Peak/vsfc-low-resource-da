@@ -50,6 +50,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-checkpoints", action="store_true")
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--num-epochs", type=float, default=None)
+    parser.add_argument("--learning-rate", type=float, default=None)
+    parser.add_argument("--weight-decay", type=float, default=None)
+    parser.add_argument("--warmup-ratio", type=float, default=None)
+    parser.add_argument("--early-stopping-patience", type=int, default=None)
+    parser.add_argument("--class-weighting", choices=("none", "balanced"), default=None)
     parser.add_argument("--logging-steps", type=int, default=None)
     parser.add_argument("--max-train-samples", type=int, default=None)
     parser.add_argument("--max-dev-samples", type=int, default=None)
@@ -284,6 +289,11 @@ def run_phobert(
     keep_checkpoints: bool = False,
     model_name: str | None = None,
     num_epochs: float | None = None,
+    learning_rate: float | None = None,
+    weight_decay: float | None = None,
+    warmup_ratio: float | None = None,
+    early_stopping_patience: int | None = None,
+    class_weighting: str | None = None,
     logging_steps: int | None = None,
     max_train_samples: int | None = None,
     max_dev_samples: int | None = None,
@@ -320,6 +330,16 @@ def run_phobert(
         phobert_config["model_name"] = model_name
     if num_epochs is not None:
         phobert_config["num_epochs"] = num_epochs
+    if learning_rate is not None:
+        phobert_config["learning_rate"] = learning_rate
+    if weight_decay is not None:
+        phobert_config["weight_decay"] = weight_decay
+    if warmup_ratio is not None:
+        phobert_config["warmup_ratio"] = warmup_ratio
+    if early_stopping_patience is not None:
+        phobert_config["early_stopping_patience"] = early_stopping_patience
+    if class_weighting is not None:
+        phobert_config["class_weighting"] = class_weighting
     if logging_steps is not None:
         phobert_config["logging_steps"] = logging_steps
 
@@ -425,6 +445,7 @@ def run_phobert(
         "dev": dev_metrics,
         "test": test_metrics,
         "config": phobert_config,
+        "class_weights": trainer.resolved_class_weights,
     }
 
     prediction_frame = build_prediction_frame(
@@ -483,6 +504,11 @@ def main() -> None:
         keep_checkpoints=args.keep_checkpoints,
         model_name=args.model_name,
         num_epochs=args.num_epochs,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+        warmup_ratio=args.warmup_ratio,
+        early_stopping_patience=args.early_stopping_patience,
+        class_weighting=args.class_weighting,
         logging_steps=args.logging_steps,
         max_train_samples=args.max_train_samples,
         max_dev_samples=args.max_dev_samples,

@@ -11,3 +11,4 @@ metric_for_best_model: "macro_f1"
 logging_steps: 50
 dataloader_num_workers: 0
 full_determinism: false
+class_weighting: "none"

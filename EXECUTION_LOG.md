@@ -511,3 +511,34 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --num-epochs 15 --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Longer-Budget Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --num-epochs 15 --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used corrected full splits: `train=11426`, `dev=1583`, `test=3166`.
+- Early stopping halted at epoch 5 after dev macro-F1 peaked at epoch 2.
+- Dev macro-F1 by epoch:
+  - epoch 1: `0.8086`
+  - epoch 2: `0.8576`
+  - epoch 3: `0.8552`
+  - epoch 4: `0.8320`
+  - epoch 5: `0.8308`
+- Final test macro-F1: `0.8169`.
+- Phase 3 acceptance status: failed gate because `0.8169 < 0.85`.
+
+Next action:
+
+- The neutral class is only about 4-5% of each split, while negative and
+  positive dominate. Retry the no-augmentation PhoBERT gate with class-balanced
+  loss:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting balanced --logging-steps 25 --overwrite
+```

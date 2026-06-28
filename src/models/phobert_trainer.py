@@ -20,6 +20,7 @@ if any(os.environ.get(name) for name in ("KAGGLE_KERNEL_RUN_TYPE", "KAGGLE_URL_B
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import torch
+import torch.nn as nn
 from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer
 from transformers import EarlyStoppingCallback
@@ -44,6 +45,7 @@ DEFAULT_PHOBERT_CONFIG: dict[str, Any] = {
     "logging_steps": 50,
     "dataloader_num_workers": 0,
     "full_determinism": False,
+    "class_weighting": "none",
 }
 
 
@@ -54,6 +56,33 @@ class PhoBERTPredictionOutput:
     predictions: np.ndarray
     probabilities: np.ndarray
     logits: np.ndarray
+
+
+class WeightedLossTrainer(Trainer):
+    """Trainer variant with optional class-weighted cross-entropy."""
+
+    def __init__(self, *args: Any, class_weights: torch.Tensor | None = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.class_weights = class_weights
+
+    def compute_loss(
+        self,
+        model: torch.nn.Module,
+        inputs: dict[str, torch.Tensor],
+        return_outputs: bool = False,
+        **_: Any,
+    ):
+        if self.class_weights is None or "labels" not in inputs:
+            return super().compute_loss(model, inputs, return_outputs=return_outputs)
+
+        labels = inputs["labels"]
+        model_inputs = dict(inputs)
+        model_inputs.pop("labels", None)
+        outputs = model(**model_inputs)
+        logits = outputs.logits
+        loss_fn = nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
+        loss = loss_fn(logits.view(-1, model.config.num_labels), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
 
 
 class PhoBERTTrainer:
@@ -80,6 +109,7 @@ class PhoBERTTrainer:
         self.keep_checkpoints = keep_checkpoints
         self.checkpoint_dir = self.results_dir / "models" / "checkpoints" / run_name
         self.artifact_dir = self.results_dir / "models" / run_name
+        self.resolved_class_weights: list[float] | None = None
 
         model_name = str(self.config["model_name"])
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
@@ -151,6 +181,22 @@ class PhoBERTTrainer:
             max_length=int(self.config["max_length"]),
         )
 
+    def _compute_class_weights(self, train_df: pd.DataFrame) -> torch.Tensor | None:
+        strategy = str(self.config.get("class_weighting", "none")).lower()
+        if strategy in {"none", "false", "0", ""}:
+            self.resolved_class_weights = None
+            return None
+        if strategy != "balanced":
+            raise ValueError(f"Unsupported class_weighting strategy: {strategy}")
+
+        labels = train_df["sentiment"].astype(int).to_numpy()
+        counts = np.bincount(labels, minlength=self.num_labels).astype(float)
+        if np.any(counts == 0):
+            raise ValueError(f"Cannot use balanced class weights with empty labels: {counts.tolist()}")
+        weights = len(labels) / (self.num_labels * counts)
+        self.resolved_class_weights = [float(weight) for weight in weights]
+        return torch.tensor(weights, dtype=torch.float)
+
     @staticmethod
     def _compute_trainer_metrics(eval_pred: Any) -> dict[str, float]:
         if hasattr(eval_pred, "predictions"):
@@ -183,21 +229,26 @@ class PhoBERTTrainer:
         train_dataset = self._make_dataset(train_df)
         dev_dataset = self._make_dataset(dev_df)
         args = self._training_arguments()
+        class_weights = self._compute_class_weights(train_df)
         callbacks = [
             EarlyStoppingCallback(
                 early_stopping_patience=int(self.config["early_stopping_patience"])
             )
         ]
-
-        self.trainer = Trainer(
-            model=self.model,
-            args=args,
-            train_dataset=train_dataset,
-            eval_dataset=dev_dataset,
-            compute_metrics=self._compute_trainer_metrics,
-            callbacks=callbacks,
+        trainer_cls = WeightedLossTrainer if class_weights is not None else Trainer
+        trainer_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "args": args,
+            "train_dataset": train_dataset,
+            "eval_dataset": dev_dataset,
+            "compute_metrics": self._compute_trainer_metrics,
+            "callbacks": callbacks,
             **self._trainer_kwargs(),
-        )
+        }
+        if class_weights is not None:
+            trainer_kwargs["class_weights"] = class_weights
+
+        self.trainer = trainer_cls(**trainer_kwargs)
         self.trainer.train()
         self.save_lightweight_artifacts()
         if not self.keep_checkpoints:
@@ -235,6 +286,8 @@ class PhoBERTTrainer:
         save_json(
             {
                 "model_name": self.config["model_name"],
+                "class_weighting": self.config.get("class_weighting", "none"),
+                "class_weights": self.resolved_class_weights,
                 "num_labels": self.num_labels,
                 "seed": self.seed,
                 "run_name": self.run_name,
