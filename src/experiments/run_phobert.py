@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from src.data.preprocess import preprocess_frame
@@ -29,6 +30,7 @@ VALID_AUGMENTATIONS = (
     "llm_paraphrase_raw",
     "llm_paraphrase_filtered",
 )
+VALID_DECISION_RULES = ("argmax", "tune_logit_bias")
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,6 +65,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-train-samples", type=int, default=None)
     parser.add_argument("--max-dev-samples", type=int, default=None)
     parser.add_argument("--max-test-samples", type=int, default=None)
+    parser.add_argument("--decision-rule", choices=VALID_DECISION_RULES, default="argmax")
+    parser.add_argument("--logit-bias-min", type=float, default=-2.0)
+    parser.add_argument("--logit-bias-max", type=float, default=2.0)
+    parser.add_argument("--logit-bias-step", type=float, default=0.05)
     parser.add_argument("--disable-gating", action="store_true")
     parser.add_argument("--gating-threshold", type=float, default=0.85)
     return parser.parse_args()
@@ -237,6 +243,77 @@ def build_prediction_frame(
         output[f"prob_{class_id}"] = probabilities[:, class_id]
     return output
 
+def predict_with_logit_bias(logits, bias: list[float] | np.ndarray) -> np.ndarray:
+    """Predict labels after adding a class-specific logit bias."""
+    return np.argmax(np.asarray(logits) + np.asarray(bias), axis=-1)
+
+def macro_f1_from_predictions(
+    labels: np.ndarray,
+    predictions: np.ndarray,
+    num_labels: int,
+) -> float:
+    """Compute macro-F1 without sklearn overhead inside tight tuning loops."""
+    scores = []
+    for label in range(num_labels):
+        true_positive = np.sum((labels == label) & (predictions == label))
+        false_positive = np.sum((labels != label) & (predictions == label))
+        false_negative = np.sum((labels == label) & (predictions != label))
+        denominator = (2 * true_positive) + false_positive + false_negative
+        scores.append(0.0 if denominator == 0 else (2 * true_positive) / denominator)
+    return float(np.mean(scores))
+
+def tune_logit_bias(
+    logits,
+    labels,
+    min_bias: float = -2.0,
+    max_bias: float = 2.0,
+    step: float = 0.05,
+) -> tuple[list[float], dict[str, Any]]:
+    """Tune a 3-class logit bias on dev macro-F1.
+
+    Biases are relative, so class 0 is fixed at 0 and classes 1/2 are swept.
+    """
+    if step <= 0:
+        raise ValueError(f"logit-bias-step must be positive, got {step}")
+
+    logits_array = np.asarray(logits)
+    labels_array = np.asarray(labels, dtype=int)
+    values = np.arange(min_bias, max_bias + (step / 2), step)
+    best_score = -1.0
+    best_bias = np.zeros(logits_array.shape[1], dtype=float)
+    best_predictions = np.argmax(logits_array, axis=-1)
+
+    for label_1_bias in values:
+        for label_2_bias in values:
+            bias = np.array([0.0, label_1_bias, label_2_bias], dtype=float)
+            predictions = predict_with_logit_bias(logits_array, bias)
+            score = macro_f1_from_predictions(
+                labels_array,
+                predictions,
+                num_labels=logits_array.shape[1],
+            )
+            best_norm = float(np.linalg.norm(best_bias))
+            current_norm = float(np.linalg.norm(bias))
+            if score > best_score or (
+                np.isclose(score, best_score) and current_norm < best_norm
+            ):
+                best_score = score
+                best_bias = bias
+                best_predictions = predictions
+
+    return (
+        [float(value) for value in best_bias],
+        {
+            "best_dev_macro_f1": float(best_score),
+            "grid": {
+                "min": float(min_bias),
+                "max": float(max_bias),
+                "step": float(step),
+            },
+            "predictions": best_predictions,
+        },
+    )
+
 
 def output_paths(
     augmentation: str,
@@ -302,6 +379,10 @@ def run_phobert(
     max_train_samples: int | None = None,
     max_dev_samples: int | None = None,
     max_test_samples: int | None = None,
+    decision_rule: str = "argmax",
+    logit_bias_min: float = -2.0,
+    logit_bias_max: float = 2.0,
+    logit_bias_step: float = 0.05,
     disable_gating: bool = False,
     gating_threshold: float = 0.85,
 ) -> dict[str, Any]:
@@ -430,8 +511,38 @@ def run_phobert(
     prediction_output = trainer.predict(test_df)
 
     dev_output = trainer.predict(dev_df)
-    dev_metrics = compute_metrics(dev_df["sentiment"], dev_output.predictions)
-    test_metrics = compute_metrics(test_df["sentiment"], prediction_output.predictions)
+    raw_dev_metrics = compute_metrics(dev_df["sentiment"], dev_output.predictions)
+    raw_test_metrics = compute_metrics(test_df["sentiment"], prediction_output.predictions)
+    dev_predictions = dev_output.predictions
+    test_predictions = prediction_output.predictions
+    decision: dict[str, Any] = {"rule": decision_rule}
+
+    if decision_rule == "tune_logit_bias":
+        bias, tuning_info = tune_logit_bias(
+            dev_output.logits,
+            dev_df["sentiment"],
+            min_bias=logit_bias_min,
+            max_bias=logit_bias_max,
+            step=logit_bias_step,
+        )
+        dev_predictions = tuning_info.pop("predictions")
+        test_predictions = predict_with_logit_bias(prediction_output.logits, bias)
+        decision.update(
+            {
+                "logit_bias": bias,
+                "tuning": tuning_info,
+            }
+        )
+        LOGGER.info(
+            "Tuned logit bias on dev: bias=%s dev_macro_f1=%.4f",
+            [round(value, 4) for value in bias],
+            tuning_info["best_dev_macro_f1"],
+        )
+    elif decision_rule != "argmax":
+        raise ValueError(f"Unsupported decision_rule: {decision_rule}")
+
+    dev_metrics = compute_metrics(dev_df["sentiment"], dev_predictions)
+    test_metrics = compute_metrics(test_df["sentiment"], test_predictions)
     metrics: dict[str, Any] = {
         "model": "phobert",
         "augmentation": augmentation,
@@ -448,13 +559,16 @@ def run_phobert(
         },
         "dev": dev_metrics,
         "test": test_metrics,
+        "raw_dev": raw_dev_metrics,
+        "raw_test": raw_test_metrics,
         "config": phobert_config,
         "class_weights": trainer.resolved_class_weights,
+        "decision": decision,
     }
 
     prediction_frame = build_prediction_frame(
         test_df,
-        prediction_output.predictions,
+        test_predictions,
         prediction_output.probabilities,
     )
     ensure_parent_dir(prediction_path)
@@ -462,7 +576,7 @@ def run_phobert(
     save_json(metrics, metrics_path)
     confusion_matrix_plot(
         test_df["sentiment"],
-        prediction_output.predictions,
+        test_predictions,
         save_path=figure_path,
     )
 
@@ -517,6 +631,10 @@ def main() -> None:
         max_train_samples=args.max_train_samples,
         max_dev_samples=args.max_dev_samples,
         max_test_samples=args.max_test_samples,
+        decision_rule=args.decision_rule,
+        logit_bias_min=args.logit_bias_min,
+        logit_bias_max=args.logit_bias_max,
+        logit_bias_step=args.logit_bias_step,
         disable_gating=args.disable_gating,
         gating_threshold=args.gating_threshold,
     )

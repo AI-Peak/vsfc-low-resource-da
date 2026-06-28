@@ -592,3 +592,28 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --learning-rate 1e-5 --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle LR 1e-5 Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --learning-rate 1e-5 --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used corrected full splits: `train=11426`, `dev=1583`, `test=3166`.
+- Dev macro-F1 reached `0.8622` at epoch 4.
+- Final test macro-F1: `0.8237`.
+- Phase 3 acceptance status: failed gate because `0.8237 < 0.85`.
+
+Next action:
+
+- LR tuning and class weighting both underperformed the original default
+  argmax run (`0.8475`). Keep the default model training setup and tune only a
+  validation-set logit bias for the decision rule:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25 --overwrite
+```
