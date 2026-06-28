@@ -44,10 +44,11 @@ recovery sweep:
 python scripts/phase3_sweep.py --stop-on-pass
 ```
 
-If the base sweep still does not pass, retry with PhoBERT-large included:
+If the base sweep already ran and still did not pass, retry only the
+PhoBERT-large fallback:
 
 ```bash
-python scripts/phase3_sweep.py --stop-on-pass --include-large
+python scripts/phase3_sweep.py --stop-on-pass --large-only
 ```
 
 When the sweep prints `Final gate command to run`, run that command once to

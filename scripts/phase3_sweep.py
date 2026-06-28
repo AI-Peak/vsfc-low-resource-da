@@ -52,6 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--logging-steps", type=int, default=25)
     parser.add_argument("--max-runs", type=int, default=None)
     parser.add_argument("--include-large", action="store_true")
+    parser.add_argument("--large-only", action="store_true")
     parser.add_argument("--stop-on-pass", action="store_true")
     return parser.parse_args()
 
@@ -109,8 +110,11 @@ def final_gate_command(run: SweepRun, logging_steps: int) -> list[str]:
 
 def main() -> None:
     args = parse_args()
-    runs = list(BASE_RUNS)
-    if args.include_large:
+    if args.large_only:
+        runs = [LARGE_RUN]
+    else:
+        runs = list(BASE_RUNS)
+    if args.include_large and not args.large_only:
         runs.append(LARGE_RUN)
     if args.max_runs is not None:
         runs = runs[: args.max_runs]
@@ -182,7 +186,8 @@ def main() -> None:
         print(" ".join(final_gate_command(pass_candidate, args.logging_steps)), flush=True)
     else:
         print(
-            "\nNo pass candidate yet. Retry with --include-large if the base sweep is still below gate.",
+            "\nNo pass candidate yet. Retry with --large-only if the base sweep is already done, "
+            "or --include-large to run base plus large in a fresh session.",
             flush=True,
         )
 

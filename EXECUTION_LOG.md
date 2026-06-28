@@ -672,9 +672,37 @@ Next action:
 python scripts/phase3_sweep.py --stop-on-pass
 ```
 
-- If the base sweep still misses the gate, include the larger PhoBERT
+- If the base sweep still misses the gate, run only the larger PhoBERT
   checkpoint as a final fallback:
 
 ```bash
-python scripts/phase3_sweep.py --stop-on-pass --include-large
+python scripts/phase3_sweep.py --stop-on-pass --large-only
+```
+
+## Phase 3 Kaggle Base Recovery Sweep
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass
+```
+
+Result:
+
+- `maxlen192`: test macro-F1 `0.8419`.
+- `lr3e-5`: test macro-F1 `0.8367`.
+- `warmup0`: test macro-F1 `0.8396`.
+- `wd0`: test macro-F1 `0.8451`.
+- `ls002`: test macro-F1 `0.8372`.
+- Best base-sweep result: `wd0`, test macro-F1 `0.8451`.
+- Phase 3 acceptance status: still below `0.85`; the earlier standard
+  PhoBERT-base dev-tuned run remains the strongest base result at `0.8478`.
+
+Next action:
+
+- Avoid rerunning the completed base sweep. Pull the updated script and run the
+  large-only fallback:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --large-only
 ```
