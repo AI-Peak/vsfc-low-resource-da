@@ -568,3 +568,27 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting sqrt_balanced --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Sqrt-Balanced Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting sqrt_balanced --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used corrected full splits: `train=11426`, `dev=1583`, `test=3166`.
+- Dev macro-F1 reached `0.8596` at epoch 5.
+- Final test macro-F1: `0.8402`.
+- Phase 3 acceptance status: failed gate because `0.8402 < 0.85`.
+
+Next action:
+
+- The best test result so far remains the no-weighting default run
+  (`0.8475`), so return to no class weighting and tune learning rate lightly:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --learning-rate 1e-5 --logging-steps 25 --overwrite
+```
