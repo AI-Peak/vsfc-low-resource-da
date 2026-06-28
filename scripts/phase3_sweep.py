@@ -44,6 +44,18 @@ LARGE_RUN = SweepRun(
     ),
 )
 
+V2_RUNS: tuple[SweepRun, ...] = (
+    SweepRun("phobert_base_v2", ("--model-name", "vinai/phobert-base-v2")),
+    SweepRun(
+        "phobert_base_v2_wd0",
+        ("--model-name", "vinai/phobert-base-v2", "--weight-decay", "0.0"),
+    ),
+    SweepRun(
+        "phobert_base_v2_maxlen192",
+        ("--model-name", "vinai/phobert-base-v2", "--max-length", "192"),
+    ),
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a focused Phase 3 sweep.")
@@ -52,7 +64,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--logging-steps", type=int, default=25)
     parser.add_argument("--max-runs", type=int, default=None)
     parser.add_argument("--include-large", action="store_true")
+    parser.add_argument("--include-v2", action="store_true")
     parser.add_argument("--large-only", action="store_true")
+    parser.add_argument("--v2-only", action="store_true")
     parser.add_argument("--stop-on-pass", action="store_true")
     return parser.parse_args()
 
@@ -110,12 +124,19 @@ def final_gate_command(run: SweepRun, logging_steps: int) -> list[str]:
 
 def main() -> None:
     args = parse_args()
-    if args.large_only:
+    if args.large_only and args.v2_only:
+        raise ValueError("Choose only one of --large-only or --v2-only.")
+
+    if args.v2_only:
+        runs = list(V2_RUNS)
+    elif args.large_only:
         runs = [LARGE_RUN]
     else:
         runs = list(BASE_RUNS)
     if args.include_large and not args.large_only:
         runs.append(LARGE_RUN)
+    if args.include_v2 and not args.v2_only:
+        runs.extend(V2_RUNS)
     if args.max_runs is not None:
         runs = runs[: args.max_runs]
 
@@ -186,8 +207,9 @@ def main() -> None:
         print(" ".join(final_gate_command(pass_candidate, args.logging_steps)), flush=True)
     else:
         print(
-            "\nNo pass candidate yet. Retry with --large-only if the base sweep is already done, "
-            "or --include-large to run base plus large in a fresh session.",
+            "\nNo pass candidate yet. Retry with --v2-only if base and large are already done, "
+            "--large-only if only the base sweep is done, or --include-v2/--include-large "
+            "in a fresh session.",
             flush=True,
         )
 

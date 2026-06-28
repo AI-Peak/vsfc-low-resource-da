@@ -51,6 +51,13 @@ PhoBERT-large fallback:
 python scripts/phase3_sweep.py --stop-on-pass --large-only
 ```
 
+If both the base sweep and PhoBERT-large fallback already ran without passing,
+try the VinAI PhoBERT-base v2 fallback:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --v2-only
+```
+
 When the sweep prints `Final gate command to run`, run that command once to
 write the accepted `results/logs/phobert_none_1.00_42.json` artifact.
 

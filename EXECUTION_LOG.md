@@ -706,3 +706,35 @@ Next action:
 ```bash
 python scripts/phase3_sweep.py --stop-on-pass --large-only
 ```
+
+## Phase 3 Kaggle PhoBERT-Large Fallback
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --large-only
+```
+
+Result:
+
+- `phobert_large_maxlen192` completed without OOM.
+- Dev-tuned logit bias selected `bias=[0.0, 0.0, -0.05]`.
+- Dev macro-F1: `0.8790`.
+- Test macro-F1: `0.8272`.
+- Neutral-class test F1: `0.5736`.
+- Phase 3 acceptance status: failed gate because `0.8272 < 0.85`.
+
+Conclusion:
+
+- PhoBERT-large is slower and generalizes worse on the test split than the
+  current best PhoBERT-base run (`0.8478`).
+- Do not rerun the large fallback unless there is a code/config change.
+
+Next action:
+
+- Try the VinAI PhoBERT-base v2 checkpoint while keeping the Phase 3 setting
+  fixed (`augmentation=none`, `ratio=1.00`, `seed=42`):
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --v2-only
+```
