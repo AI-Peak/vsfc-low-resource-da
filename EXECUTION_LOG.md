@@ -415,6 +415,7 @@ Remediation implemented:
 - Pinned stable HuggingFace training dependencies in `requirements.txt`:
   - `transformers==4.37.2`
   - `accelerate==0.25.0`
+  - `peft==0.7.1`
 - Updated `VSFCDataset` to tokenize each split once during dataset creation
   instead of tokenizing inside every training `__getitem__`.
 - Changed Trainer logging from epoch-only to step logging with
@@ -430,6 +431,10 @@ Remediation implemented:
   - runs the full gate with `--num-epochs 5 --logging-steps 25`.
 - Added a Kaggle-side safeguard in `PhoBERTTrainer` so even an older imported
   notebook defaults to one visible GPU unless `VSFC_USE_ALL_GPUS=1` is set.
+- Pinned `peft==0.7.1` after Kaggle smoke test exposed an import mismatch:
+  Kaggle's preinstalled newer `peft` expected
+  `accelerate.utils.memory.clear_device_cache`, which is not available in
+  `accelerate==0.25.0`.
 
 Next action:
 
