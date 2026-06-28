@@ -64,6 +64,12 @@ If the v2 fallback also misses the gate, run the focused last-mile sweep:
 python scripts/phase3_sweep.py --stop-on-pass --last-mile-only
 ```
 
+If the last-mile sweep still misses the gate, run the affine-calibration sweep:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --calibration-only
+```
+
 When the sweep prints `Final gate command to run`, run that command once to
 write the accepted `results/logs/phobert_none_1.00_42.json` artifact.
 

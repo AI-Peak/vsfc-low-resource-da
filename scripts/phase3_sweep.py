@@ -85,6 +85,42 @@ LAST_MILE_RUNS: tuple[SweepRun, ...] = (
     ),
 )
 
+CALIBRATION_RUNS: tuple[SweepRun, ...] = (
+    SweepRun(
+        "base_affine_scale_bias",
+        ("--decision-rule", "tune_logit_affine"),
+    ),
+    SweepRun(
+        "base_lr15_affine_scale_bias",
+        (
+            "--decision-rule",
+            "tune_logit_affine",
+            "--learning-rate",
+            "1.5e-5",
+        ),
+    ),
+    SweepRun(
+        "base_lr25_affine_scale_bias",
+        (
+            "--decision-rule",
+            "tune_logit_affine",
+            "--learning-rate",
+            "2.5e-5",
+        ),
+    ),
+    SweepRun(
+        "base_batch8_affine_scale_bias",
+        (
+            "--decision-rule",
+            "tune_logit_affine",
+            "--batch-size",
+            "8",
+            "--eval-batch-size",
+            "16",
+        ),
+    ),
+)
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a focused Phase 3 sweep.")
     parser.add_argument("--results-dir", default="results/phase3_sweep")
@@ -97,12 +133,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--v2-only", action="store_true")
     parser.add_argument("--include-last-mile", action="store_true")
     parser.add_argument("--last-mile-only", action="store_true")
+    parser.add_argument("--include-calibration", action="store_true")
+    parser.add_argument("--calibration-only", action="store_true")
     parser.add_argument("--stop-on-pass", action="store_true")
     return parser.parse_args()
 
 
-def common_command(logging_steps: int) -> list[str]:
-    return [
+def common_command(logging_steps: int, run_args: tuple[str, ...] = ()) -> list[str]:
+    command = [
         sys.executable,
         "-m",
         "src.experiments.run_phobert",
@@ -112,13 +150,14 @@ def common_command(logging_steps: int) -> list[str]:
         "42",
         "--augmentation",
         "none",
-        "--decision-rule",
-        "tune_logit_bias",
         "--logging-steps",
         str(logging_steps),
         "--disable-gating",
         "--overwrite",
     ]
+    if "--decision-rule" not in run_args:
+        command.extend(["--decision-rule", "tune_logit_bias"])
+    return command
 
 
 def metrics_path(results_dir: Path) -> Path:
@@ -133,7 +172,7 @@ def read_metrics(results_dir: Path) -> dict:
 
 
 def final_gate_command(run: SweepRun, logging_steps: int) -> list[str]:
-    return [
+    command = [
         sys.executable,
         "-m",
         "src.experiments.run_phobert",
@@ -143,22 +182,33 @@ def final_gate_command(run: SweepRun, logging_steps: int) -> list[str]:
         "42",
         "--augmentation",
         "none",
-        "--decision-rule",
-        "tune_logit_bias",
         "--logging-steps",
         str(logging_steps),
         "--overwrite",
-        *run.args,
     ]
+    if "--decision-rule" not in run.args:
+        command.extend(["--decision-rule", "tune_logit_bias"])
+    command.extend(run.args)
+    return command
 
 
 def main() -> None:
     args = parse_args()
-    exclusive_modes = [args.large_only, args.v2_only, args.last_mile_only]
+    exclusive_modes = [
+        args.large_only,
+        args.v2_only,
+        args.last_mile_only,
+        args.calibration_only,
+    ]
     if sum(bool(value) for value in exclusive_modes) > 1:
-        raise ValueError("Choose only one of --large-only, --v2-only, or --last-mile-only.")
+        raise ValueError(
+            "Choose only one of --large-only, --v2-only, "
+            "--last-mile-only, or --calibration-only."
+        )
 
-    if args.last_mile_only:
+    if args.calibration_only:
+        runs = list(CALIBRATION_RUNS)
+    elif args.last_mile_only:
         runs = list(LAST_MILE_RUNS)
     elif args.v2_only:
         runs = list(V2_RUNS)
@@ -172,6 +222,8 @@ def main() -> None:
         runs.extend(V2_RUNS)
     if args.include_last_mile and not args.last_mile_only:
         runs.extend(LAST_MILE_RUNS)
+    if args.include_calibration and not args.calibration_only:
+        runs.extend(CALIBRATION_RUNS)
     if args.max_runs is not None:
         runs = runs[: args.max_runs]
 
@@ -182,7 +234,7 @@ def main() -> None:
     for index, run in enumerate(runs, start=1):
         run_results_dir = results_root / run.name
         command = [
-            *common_command(args.logging_steps),
+            *common_command(args.logging_steps, run.args),
             "--results-dir",
             str(run_results_dir),
             *run.args,
@@ -244,7 +296,8 @@ def main() -> None:
         print(
             "\nNo pass candidate yet. Use --large-only if only the base sweep is done, "
             "--v2-only if base and large are done, or --last-mile-only if base, "
-            "large, and v2 are already done.",
+            "large, and v2 are already done. Use --calibration-only after "
+            "last-mile misses.",
             flush=True,
         )
 

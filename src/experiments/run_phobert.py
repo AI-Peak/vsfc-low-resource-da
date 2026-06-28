@@ -30,7 +30,7 @@ VALID_AUGMENTATIONS = (
     "llm_paraphrase_raw",
     "llm_paraphrase_filtered",
 )
-VALID_DECISION_RULES = ("argmax", "tune_logit_bias")
+VALID_DECISION_RULES = ("argmax", "tune_logit_bias", "tune_logit_affine")
 
 
 def parse_args() -> argparse.Namespace:
@@ -74,6 +74,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--logit-bias-min", type=float, default=-2.0)
     parser.add_argument("--logit-bias-max", type=float, default=2.0)
     parser.add_argument("--logit-bias-step", type=float, default=0.05)
+    parser.add_argument("--logit-scale-values", default="0.8,0.9,1.0,1.1,1.2")
     parser.add_argument("--disable-gating", action="store_true")
     parser.add_argument("--gating-threshold", type=float, default=0.85)
     return parser.parse_args()
@@ -252,6 +253,14 @@ def predict_with_logit_bias(logits, bias: list[float] | np.ndarray) -> np.ndarra
     """Predict labels after adding a class-specific logit bias."""
     return np.argmax(np.asarray(logits) + np.asarray(bias), axis=-1)
 
+def predict_with_logit_affine(
+    logits,
+    scale: list[float] | np.ndarray,
+    bias: list[float] | np.ndarray,
+) -> np.ndarray:
+    """Predict labels after class-specific logit scaling and bias."""
+    return np.argmax((np.asarray(logits) * np.asarray(scale)) + np.asarray(bias), axis=-1)
+
 def macro_f1_from_predictions(
     labels: np.ndarray,
     predictions: np.ndarray,
@@ -314,6 +323,84 @@ def tune_logit_bias(
                 "min": float(min_bias),
                 "max": float(max_bias),
                 "step": float(step),
+            },
+            "predictions": best_predictions,
+        },
+    )
+
+def parse_float_values(raw_values: str) -> list[float]:
+    values = [float(value.strip()) for value in raw_values.split(",") if value.strip()]
+    if not values:
+        raise ValueError("logit-scale-values must include at least one float")
+    if any(value <= 0 for value in values):
+        raise ValueError(f"logit-scale-values must be positive, got {values}")
+    return values
+
+def tune_logit_affine(
+    logits,
+    labels,
+    min_bias: float = -2.0,
+    max_bias: float = 2.0,
+    step: float = 0.05,
+    scale_values: list[float] | None = None,
+) -> tuple[list[float], list[float], dict[str, Any]]:
+    """Tune class-specific logit scale and bias on dev macro-F1.
+
+    Class 0 is fixed at scale=1 and bias=0 so the search stays relative.
+    """
+    if step <= 0:
+        raise ValueError(f"logit-bias-step must be positive, got {step}")
+
+    scale_candidates = np.asarray(scale_values or [0.8, 0.9, 1.0, 1.1, 1.2], dtype=float)
+    if np.any(scale_candidates <= 0):
+        raise ValueError(f"logit scale values must be positive: {scale_candidates.tolist()}")
+
+    logits_array = np.asarray(logits)
+    labels_array = np.asarray(labels, dtype=int)
+    bias_values = np.arange(min_bias, max_bias + (step / 2), step)
+    best_score = -1.0
+    best_scale = np.ones(logits_array.shape[1], dtype=float)
+    best_bias = np.zeros(logits_array.shape[1], dtype=float)
+    best_predictions = np.argmax(logits_array, axis=-1)
+
+    for label_1_scale in scale_candidates:
+        for label_2_scale in scale_candidates:
+            scale = np.array([1.0, label_1_scale, label_2_scale], dtype=float)
+            scaled_logits = logits_array * scale
+            for label_1_bias in bias_values:
+                for label_2_bias in bias_values:
+                    bias = np.array([0.0, label_1_bias, label_2_bias], dtype=float)
+                    predictions = predict_with_logit_bias(scaled_logits, bias)
+                    score = macro_f1_from_predictions(
+                        labels_array,
+                        predictions,
+                        num_labels=logits_array.shape[1],
+                    )
+                    best_complexity = float(
+                        np.linalg.norm(best_bias) + np.linalg.norm(best_scale - 1.0)
+                    )
+                    current_complexity = float(
+                        np.linalg.norm(bias) + np.linalg.norm(scale - 1.0)
+                    )
+                    if score > best_score or (
+                        np.isclose(score, best_score)
+                        and current_complexity < best_complexity
+                    ):
+                        best_score = score
+                        best_scale = scale
+                        best_bias = bias
+                        best_predictions = predictions
+
+    return (
+        [float(value) for value in best_scale],
+        [float(value) for value in best_bias],
+        {
+            "best_dev_macro_f1": float(best_score),
+            "grid": {
+                "bias_min": float(min_bias),
+                "bias_max": float(max_bias),
+                "bias_step": float(step),
+                "scale_values": [float(value) for value in scale_candidates],
             },
             "predictions": best_predictions,
         },
@@ -393,6 +480,7 @@ def run_phobert(
     logit_bias_min: float = -2.0,
     logit_bias_max: float = 2.0,
     logit_bias_step: float = 0.05,
+    logit_scale_values: str = "0.8,0.9,1.0,1.1,1.2",
     disable_gating: bool = False,
     gating_threshold: float = 0.85,
 ) -> dict[str, Any]:
@@ -558,6 +646,34 @@ def run_phobert(
             [round(value, 4) for value in bias],
             tuning_info["best_dev_macro_f1"],
         )
+    elif decision_rule == "tune_logit_affine":
+        scale, bias, tuning_info = tune_logit_affine(
+            dev_output.logits,
+            dev_df["sentiment"],
+            min_bias=logit_bias_min,
+            max_bias=logit_bias_max,
+            step=logit_bias_step,
+            scale_values=parse_float_values(logit_scale_values),
+        )
+        dev_predictions = tuning_info.pop("predictions")
+        test_predictions = predict_with_logit_affine(
+            prediction_output.logits,
+            scale,
+            bias,
+        )
+        decision.update(
+            {
+                "logit_scale": scale,
+                "logit_bias": bias,
+                "tuning": tuning_info,
+            }
+        )
+        LOGGER.info(
+            "Tuned logit affine rule on dev: scale=%s bias=%s dev_macro_f1=%.4f",
+            [round(value, 4) for value in scale],
+            [round(value, 4) for value in bias],
+            tuning_info["best_dev_macro_f1"],
+        )
     elif decision_rule != "argmax":
         raise ValueError(f"Unsupported decision_rule: {decision_rule}")
 
@@ -660,6 +776,7 @@ def main() -> None:
         logit_bias_min=args.logit_bias_min,
         logit_bias_max=args.logit_bias_max,
         logit_bias_step=args.logit_bias_step,
+        logit_scale_values=args.logit_scale_values,
         disable_gating=args.disable_gating,
         gating_threshold=args.gating_threshold,
     )

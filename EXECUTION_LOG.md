@@ -782,3 +782,52 @@ Next action:
 ```bash
 python scripts/phase3_sweep.py --stop-on-pass --last-mile-only
 ```
+
+## Phase 3 Kaggle Last-Mile Sweep
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --last-mile-only
+```
+
+Result:
+
+- `base_fine_bias_step001`: dev macro-F1 `0.8860`, test macro-F1 `0.8478`,
+  neutral-class test F1 `0.6280`.
+- `base_wd0_fine_bias_step001`: dev macro-F1 `0.8826`, test macro-F1
+  `0.8459`, neutral-class test F1 `0.6195`.
+- `base_neutral_checkpoint_fine_bias`: dev macro-F1 `0.8860`, test macro-F1
+  `0.8478`, neutral-class test F1 `0.6280`.
+- `base_neutral_checkpoint_wd0_fine_bias`: dev macro-F1 `0.8826`,
+  test macro-F1 `0.8459`, neutral-class test F1 `0.6195`.
+- Best last-mile result by test: `base_fine_bias_step001`, test macro-F1
+  `0.8478`.
+- Phase 3 acceptance status: failed gate because `0.8478 < 0.85`.
+
+Conclusion:
+
+- A finer logit-bias grid and neutral-class checkpoint selection do not improve
+  over the earlier standard PhoBERT-base decision-tuned result.
+- The remaining gap is about `0.0022` macro-F1, so the next recovery attempt
+  should target the decision boundary shape rather than rerun completed model
+  families.
+
+Remediation implemented:
+
+- Added `tune_logit_affine`, a dev-tuned decision rule that searches
+  class-specific logit scales plus class-specific logit biases.
+- Added `--logit-scale-values` to control the scale grid.
+- Added `--calibration-only` to `scripts/phase3_sweep.py`.
+- Calibration candidates keep `augmentation=none`, `ratio=1.00`, and
+  `seed=42` fixed, then test:
+  - standard PhoBERT-base with affine calibration;
+  - learning rate `1.5e-5` with affine calibration;
+  - learning rate `2.5e-5` with affine calibration;
+  - batch size `8` with affine calibration.
+
+Next action:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --calibration-only
+```
