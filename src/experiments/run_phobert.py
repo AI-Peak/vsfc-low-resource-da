@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup-ratio", type=float, default=None)
     parser.add_argument("--label-smoothing-factor", type=float, default=None)
     parser.add_argument("--early-stopping-patience", type=int, default=None)
+    parser.add_argument("--metric-for-best-model", default=None)
     parser.add_argument(
         "--class-weighting",
         choices=("none", "balanced", "sqrt_balanced"),
@@ -382,6 +383,7 @@ def run_phobert(
     warmup_ratio: float | None = None,
     label_smoothing_factor: float | None = None,
     early_stopping_patience: int | None = None,
+    metric_for_best_model: str | None = None,
     class_weighting: str | None = None,
     logging_steps: int | None = None,
     max_train_samples: int | None = None,
@@ -439,6 +441,8 @@ def run_phobert(
         phobert_config["label_smoothing_factor"] = label_smoothing_factor
     if early_stopping_patience is not None:
         phobert_config["early_stopping_patience"] = early_stopping_patience
+    if metric_for_best_model is not None:
+        phobert_config["metric_for_best_model"] = metric_for_best_model
     if class_weighting is not None:
         phobert_config["class_weighting"] = class_weighting
     if logging_steps is not None:
@@ -646,6 +650,7 @@ def main() -> None:
         warmup_ratio=args.warmup_ratio,
         label_smoothing_factor=args.label_smoothing_factor,
         early_stopping_patience=args.early_stopping_patience,
+        metric_for_best_model=args.metric_for_best_model,
         class_weighting=args.class_weighting,
         logging_steps=args.logging_steps,
         max_train_samples=args.max_train_samples,

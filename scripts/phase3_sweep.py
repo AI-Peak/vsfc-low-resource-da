@@ -57,6 +57,34 @@ V2_RUNS: tuple[SweepRun, ...] = (
 )
 
 
+LAST_MILE_RUNS: tuple[SweepRun, ...] = (
+    SweepRun("base_fine_bias_step001", ("--logit-bias-step", "0.01")),
+    SweepRun(
+        "base_wd0_fine_bias_step001",
+        ("--weight-decay", "0.0", "--logit-bias-step", "0.01"),
+    ),
+    SweepRun(
+        "base_neutral_checkpoint_fine_bias",
+        (
+            "--metric-for-best-model",
+            "f1_label_1",
+            "--logit-bias-step",
+            "0.01",
+        ),
+    ),
+    SweepRun(
+        "base_neutral_checkpoint_wd0_fine_bias",
+        (
+            "--metric-for-best-model",
+            "f1_label_1",
+            "--weight-decay",
+            "0.0",
+            "--logit-bias-step",
+            "0.01",
+        ),
+    ),
+)
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a focused Phase 3 sweep.")
     parser.add_argument("--results-dir", default="results/phase3_sweep")
@@ -67,6 +95,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-v2", action="store_true")
     parser.add_argument("--large-only", action="store_true")
     parser.add_argument("--v2-only", action="store_true")
+    parser.add_argument("--include-last-mile", action="store_true")
+    parser.add_argument("--last-mile-only", action="store_true")
     parser.add_argument("--stop-on-pass", action="store_true")
     return parser.parse_args()
 
@@ -124,10 +154,13 @@ def final_gate_command(run: SweepRun, logging_steps: int) -> list[str]:
 
 def main() -> None:
     args = parse_args()
-    if args.large_only and args.v2_only:
-        raise ValueError("Choose only one of --large-only or --v2-only.")
+    exclusive_modes = [args.large_only, args.v2_only, args.last_mile_only]
+    if sum(bool(value) for value in exclusive_modes) > 1:
+        raise ValueError("Choose only one of --large-only, --v2-only, or --last-mile-only.")
 
-    if args.v2_only:
+    if args.last_mile_only:
+        runs = list(LAST_MILE_RUNS)
+    elif args.v2_only:
         runs = list(V2_RUNS)
     elif args.large_only:
         runs = [LARGE_RUN]
@@ -137,6 +170,8 @@ def main() -> None:
         runs.append(LARGE_RUN)
     if args.include_v2 and not args.v2_only:
         runs.extend(V2_RUNS)
+    if args.include_last_mile and not args.last_mile_only:
+        runs.extend(LAST_MILE_RUNS)
     if args.max_runs is not None:
         runs = runs[: args.max_runs]
 
@@ -207,9 +242,9 @@ def main() -> None:
         print(" ".join(final_gate_command(pass_candidate, args.logging_steps)), flush=True)
     else:
         print(
-            "\nNo pass candidate yet. Retry with --v2-only if base and large are already done, "
-            "--large-only if only the base sweep is done, or --include-v2/--include-large "
-            "in a fresh session.",
+            "\nNo pass candidate yet. Use --large-only if only the base sweep is done, "
+            "--v2-only if base and large are done, or --last-mile-only if base, "
+            "large, and v2 are already done.",
             flush=True,
         )
 

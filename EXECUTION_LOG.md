@@ -738,3 +738,47 @@ Next action:
 ```bash
 python scripts/phase3_sweep.py --stop-on-pass --v2-only
 ```
+
+## Phase 3 Kaggle PhoBERT-Base-v2 Fallback
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --v2-only
+```
+
+Result:
+
+- `phobert_base_v2`: dev macro-F1 `0.8853`, test macro-F1 `0.8366`,
+  neutral-class test F1 `0.5942`.
+- `phobert_base_v2_wd0`: dev macro-F1 `0.8823`, test macro-F1 `0.8412`,
+  neutral-class test F1 `0.6102`.
+- `phobert_base_v2_maxlen192`: dev macro-F1 `0.8815`, test macro-F1
+  `0.8404`, neutral-class test F1 `0.6073`.
+- Best v2 result by test: `phobert_base_v2_wd0`, test macro-F1 `0.8412`.
+- Phase 3 acceptance status: failed gate because `0.8412 < 0.85`.
+
+Conclusion:
+
+- PhoBERT-base-v2 has strong dev macro-F1 but does not generalize as well as
+  the earlier standard PhoBERT-base decision-tuned run (`0.8478`).
+- Do not rerun the base sweep, large fallback, or v2 fallback unless there is a
+  code/config change.
+
+Remediation implemented:
+
+- Added `--metric-for-best-model` to the PhoBERT runner so checkpoint
+  selection can target dev neutral-class F1 (`f1_label_1`) when appropriate.
+- Added `--last-mile-only` to `scripts/phase3_sweep.py`.
+- Last-mile candidates keep `augmentation=none`, `ratio=1.00`, and `seed=42`
+  fixed, then test:
+  - standard PhoBERT-base with finer dev-tuned logit-bias step `0.01`;
+  - standard PhoBERT-base with `weight_decay=0.0` and finer logit-bias step;
+  - neutral-class checkpoint selection with finer logit-bias step;
+  - neutral-class checkpoint selection plus `weight_decay=0.0`.
+
+Next action:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --last-mile-only
+```
