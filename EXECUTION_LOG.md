@@ -435,6 +435,12 @@ Remediation implemented:
   Kaggle's preinstalled newer `peft` expected
   `accelerate.utils.memory.clear_device_cache`, which is not available in
   `accelerate==0.25.0`.
+- Fixed a preprocessing cache collision found during Kaggle Phase 3 rerun:
+  the smoke test wrote sampled `dev/test` caches with 64 rows, then the full
+  gate loaded those sampled caches and reported `dev=64 test=64`. Full Phase 3
+  requires `dev=1583 test=3166`, so the `test macro_f1=0.8101` from that run is
+  invalid for acceptance. Sample-limited runs now use `dev_sampled/test_sampled`
+  cache names, and caches with row-count mismatches are ignored and regenerated.
 
 Next action:
 

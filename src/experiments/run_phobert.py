@@ -180,8 +180,16 @@ def prepare_preprocessed_frame(
         segment=segment,
     )
     if cache_path.exists() and not force:
-        LOGGER.info("Loading preprocessed cache: %s", cache_path)
-        return load_split(cache_path)
+        cached = load_split(cache_path)
+        if len(cached) == len(frame):
+            LOGGER.info("Loading preprocessed cache: %s", cache_path)
+            return cached
+        LOGGER.info(
+            "Ignoring preprocessed cache with row mismatch: %s has %s rows, expected %s",
+            cache_path,
+            len(cached),
+            len(frame),
+        )
 
     LOGGER.info(
         "Preprocessing %s rows for %s (segment=%s lowercase=%s)",
@@ -335,9 +343,16 @@ def run_phobert(
     dev_df = limit_frame(dev_df, max_dev_samples, seed)
     test_df = limit_frame(test_df, max_test_samples, seed)
 
+    sample_limited = any(
+        value is not None for value in (max_train_samples, max_dev_samples, max_test_samples)
+    )
     train_split_name = f"train_{augmentation}_{ratio_name}_{seed}"
-    if any(value is not None for value in (max_train_samples, max_dev_samples, max_test_samples)):
+    dev_split_name = "dev"
+    test_split_name = "test"
+    if sample_limited:
         train_split_name += "_sampled"
+        dev_split_name += "_sampled"
+        test_split_name += "_sampled"
         force_preprocess = True
 
     train_df = prepare_preprocessed_frame(
@@ -351,7 +366,7 @@ def run_phobert(
     )
     dev_df = prepare_preprocessed_frame(
         dev_df,
-        split_name="dev",
+        split_name=dev_split_name,
         data_dir=data_path,
         lowercase=lowercase,
         segment=segment,
@@ -360,7 +375,7 @@ def run_phobert(
     )
     test_df = prepare_preprocessed_frame(
         test_df,
-        split_name="test",
+        split_name=test_split_name,
         data_dir=data_path,
         lowercase=lowercase,
         segment=segment,
@@ -431,9 +446,6 @@ def run_phobert(
     LOGGER.info("Saved confusion matrix: %s", figure_path)
     LOGGER.info("Test macro_f1=%.4f", test_metrics["macro_f1"])
 
-    sample_limited = any(
-        value is not None for value in (max_train_samples, max_dev_samples, max_test_samples)
-    )
     is_phase3_gate = (
         augmentation == "none"
         and ratio == 1.00
