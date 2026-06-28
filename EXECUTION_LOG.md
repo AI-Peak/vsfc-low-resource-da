@@ -617,3 +617,30 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Dev-Tuned Decision Rule Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used full splits and the best dev checkpoint from the default
+  PhoBERT-base setup.
+- Dev macro-F1 reached `0.8804` at epoch 8 before decision-rule tuning.
+- Dev-tuned logit bias selected `bias=[0.0, -0.3, 1.1]` and reached
+  dev macro-F1 `0.8860`.
+- Final test macro-F1: `0.8478`.
+- Phase 3 acceptance status: failed gate because `0.8478 < 0.85`.
+
+Next action:
+
+- The model is very close to the gate but appears slightly overconfident.
+  Retry the default no-augmentation setup with mild label smoothing:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --label-smoothing-factor 0.05 --decision-rule tune_logit_bias --logging-steps 25 --overwrite
+```

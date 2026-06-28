@@ -55,6 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=None)
     parser.add_argument("--weight-decay", type=float, default=None)
     parser.add_argument("--warmup-ratio", type=float, default=None)
+    parser.add_argument("--label-smoothing-factor", type=float, default=None)
     parser.add_argument("--early-stopping-patience", type=int, default=None)
     parser.add_argument(
         "--class-weighting",
@@ -373,6 +374,7 @@ def run_phobert(
     learning_rate: float | None = None,
     weight_decay: float | None = None,
     warmup_ratio: float | None = None,
+    label_smoothing_factor: float | None = None,
     early_stopping_patience: int | None = None,
     class_weighting: str | None = None,
     logging_steps: int | None = None,
@@ -421,6 +423,8 @@ def run_phobert(
         phobert_config["weight_decay"] = weight_decay
     if warmup_ratio is not None:
         phobert_config["warmup_ratio"] = warmup_ratio
+    if label_smoothing_factor is not None:
+        phobert_config["label_smoothing_factor"] = label_smoothing_factor
     if early_stopping_patience is not None:
         phobert_config["early_stopping_patience"] = early_stopping_patience
     if class_weighting is not None:
@@ -625,6 +629,7 @@ def main() -> None:
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         warmup_ratio=args.warmup_ratio,
+        label_smoothing_factor=args.label_smoothing_factor,
         early_stopping_patience=args.early_stopping_patience,
         class_weighting=args.class_weighting,
         logging_steps=args.logging_steps,
