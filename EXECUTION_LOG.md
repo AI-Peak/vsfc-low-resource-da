@@ -428,6 +428,8 @@ Remediation implemented:
   - checks that installed `transformers` is 4.x after `pip install`;
   - runs a tiny GPU smoke test before the full Phase 3 gate;
   - runs the full gate with `--num-epochs 5 --logging-steps 25`.
+- Added a Kaggle-side safeguard in `PhoBERTTrainer` so even an older imported
+  notebook defaults to one visible GPU unless `VSFC_USE_ALL_GPUS=1` is set.
 
 Next action:
 

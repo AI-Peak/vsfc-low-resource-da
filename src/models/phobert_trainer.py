@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+
+if any(os.environ.get(name) for name in ("KAGGLE_KERNEL_RUN_TYPE", "KAGGLE_URL_BASE")):
+    if os.environ.get("VSFC_USE_ALL_GPUS") != "1":
+        visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+        os.environ["CUDA_VISIBLE_DEVICES"] = visible_devices.split(",")[0] or "0"
+
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 import torch
 from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer
