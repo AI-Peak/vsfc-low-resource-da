@@ -15,15 +15,15 @@ import shutil
 import tempfile
 import unicodedata
 from pathlib import Path
+from typing import Any
 from typing import Iterable
 
 import pandas as pd
-import py_vncorenlp
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_VNCORENLP_DIR = Path(os.environ.get("VNCORENLP_DIR", REPO_ROOT / "vncorenlp"))
-_SEGMENTER: py_vncorenlp.VnCoreNLP | None = None
+_SEGMENTER: Any | None = None
 _SEGMENTER_DIR: Path | None = None
 
 
@@ -74,7 +74,7 @@ def normalize_text(text: str) -> str:
     return normalized
 
 
-def get_segmenter(save_dir: str | Path | None = None) -> py_vncorenlp.VnCoreNLP:
+def get_segmenter(save_dir: str | Path | None = None) -> Any:
     """Load the VnCoreNLP word segmenter once and reuse it."""
     global _SEGMENTER, _SEGMENTER_DIR
 
@@ -95,10 +95,17 @@ def get_segmenter(save_dir: str | Path | None = None) -> py_vncorenlp.VnCoreNLP:
     original_cwd = Path.cwd()
 
     try:
+        import py_vncorenlp
+
         _SEGMENTER = py_vncorenlp.VnCoreNLP(
             annotators=["wseg"],
             save_dir=str(load_dir),
         )
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "py_vncorenlp is not installed. Run `pip install -r requirements.txt` "
+            "before preprocessing, or reuse an existing preprocessed cache."
+        ) from exc
     except Exception as exc:
         raise RuntimeError(
             f"Could not load VnCoreNLP from {model_dir}. "

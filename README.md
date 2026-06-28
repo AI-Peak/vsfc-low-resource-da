@@ -36,6 +36,8 @@ Kaggle/Colab. It first runs a tiny GPU smoke test, then runs the full Phase 3
 gate. On Kaggle, keep Internet on and use a GPU accelerator; the notebook
 defaults to a single visible T4 GPU to avoid multi-GPU `DataParallel` stalls.
 The Phase 3 gate is `test.macro_f1 >= 0.85` for `phobert_none_1.00_42`.
+If Kaggle reports `ModuleNotFoundError: py_vncorenlp` after a runtime reset,
+rerun `pip install -r requirements.txt` before the sweep command.
 
 If the default Phase 3 gate lands just below the threshold, run the focused
 recovery sweep:

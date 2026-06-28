@@ -831,3 +831,32 @@ Next action:
 ```bash
 python scripts/phase3_sweep.py --stop-on-pass --calibration-only
 ```
+
+## Phase 3 Kaggle Calibration Setup Interruption
+
+Observation:
+
+- The first calibration-only attempt did not reach training.
+- All four candidates failed at import time with
+  `ModuleNotFoundError: No module named 'py_vncorenlp'`.
+
+Conclusion:
+
+- This is a Kaggle environment/dependency reset, not a model or metric result.
+- `py_vncorenlp` is already listed in `requirements.txt`, so rerunning the
+  install/setup cell fixes the immediate environment.
+
+Remediation implemented:
+
+- Moved the `py_vncorenlp` import inside `get_segmenter()` so cached
+  preprocessed runs can import the PhoBERT runner without requiring the
+  segmenter package at module import time.
+- Added a clearer runtime error when preprocessing is actually needed but
+  `py_vncorenlp` is missing.
+
+Next action:
+
+```bash
+pip install -r requirements.txt
+python scripts/phase3_sweep.py --stop-on-pass --calibration-only
+```
