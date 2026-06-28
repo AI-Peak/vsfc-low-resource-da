@@ -28,12 +28,14 @@ python scripts/check_gpu.py
 python scripts/setup_vncorenlp.py
 python scripts/download_data.py
 python -m src.data.subsample --train-csv data/raw/train.csv --seed 42
-python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --num-epochs 5 --logging-steps 25
 ```
 
 The notebook `notebooks/phase3_gpu_run.ipynb` contains the same flow for
-Kaggle/Colab. The Phase 3 gate is `test.macro_f1 >= 0.85` for
-`phobert_none_1.00_42`.
+Kaggle/Colab. It first runs a tiny GPU smoke test, then runs the full Phase 3
+gate. On Kaggle, keep Internet on and use a GPU accelerator; the notebook
+defaults to a single visible T4 GPU to avoid multi-GPU `DataParallel` stalls.
+The Phase 3 gate is `test.macro_f1 >= 0.85` for `phobert_none_1.00_42`.
 
 ## Directory Overview
 

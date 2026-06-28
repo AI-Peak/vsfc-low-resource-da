@@ -389,3 +389,48 @@ python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none
 ```
 
 - Required result: `test.macro_f1 >= 0.85`.
+
+## Phase 3 Kaggle Timeout Triage
+
+Observation:
+
+- Kaggle Version 2 was canceled after `43200.4s` with `timeout exceeded`
+  (`Exit code: 137`).
+- GPU was configured correctly in the run:
+  - `torch.cuda.is_available(): True`
+  - `torch.cuda.device_count(): 2`
+  - Accelerator: `GPU T4 x2`
+- Setup, VnCoreNLP, data download, split creation, and preprocessing completed.
+- The log reached PhoBERT training startup (`0/3580`) and then produced no
+  useful progress before Kaggle's 12-hour limit.
+
+Conclusion:
+
+- This is a Kaggle runtime timeout/stall, not a Phase 3 metric failure.
+- Phase 3 acceptance is still pending because no final
+  `results/logs/phobert_none_1.00_42.json` metric was produced.
+
+Remediation implemented:
+
+- Pinned stable HuggingFace training dependencies in `requirements.txt`:
+  - `transformers==4.37.2`
+  - `accelerate==0.25.0`
+- Updated `VSFCDataset` to tokenize each split once during dataset creation
+  instead of tokenizing inside every training `__getitem__`.
+- Changed Trainer logging from epoch-only to step logging with
+  `logging_first_step=True` and configurable `--logging-steps`.
+- Disabled `full_determinism` by default for PhoBERT Trainer; deterministic
+  seeds are still set, but CUDA deterministic algorithm enforcement is avoided.
+- Updated `notebooks/phase3_gpu_run.ipynb`:
+  - forces `CUDA_VISIBLE_DEVICES=0` so Kaggle uses one T4 instead of
+    multi-GPU `DataParallel`;
+  - pulls the latest GitHub code when an existing Kaggle clone is present;
+  - checks that installed `transformers` is 4.x after `pip install`;
+  - runs a tiny GPU smoke test before the full Phase 3 gate;
+  - runs the full gate with `--num-epochs 5 --logging-steps 25`.
+
+Next action:
+
+- Rerun Kaggle from the updated GitHub notebook/repo.
+- If the smoke test does not show step logs within a few minutes, stop the run
+  and inspect the new log immediately instead of waiting for the 12-hour limit.

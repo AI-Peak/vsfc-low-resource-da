@@ -32,6 +32,9 @@ DEFAULT_PHOBERT_CONFIG: dict[str, Any] = {
     "warmup_ratio": 0.1,
     "early_stopping_patience": 3,
     "metric_for_best_model": "macro_f1",
+    "logging_steps": 50,
+    "dataloader_num_workers": 0,
+    "full_determinism": False,
 }
 
 
@@ -79,6 +82,7 @@ class PhoBERTTrainer:
 
     def _training_arguments(self) -> TrainingArguments:
         params = inspect.signature(TrainingArguments.__init__).parameters
+        logging_steps = max(1, int(self.config.get("logging_steps", 50)))
         kwargs: dict[str, Any] = {
             "output_dir": str(self.checkpoint_dir),
             "per_device_train_batch_size": int(self.config["batch_size"]),
@@ -87,7 +91,8 @@ class PhoBERTTrainer:
             "weight_decay": float(self.config["weight_decay"]),
             "num_train_epochs": float(self.config["num_epochs"]),
             "warmup_ratio": float(self.config["warmup_ratio"]),
-            "logging_strategy": "epoch",
+            "logging_strategy": "steps",
+            "logging_steps": logging_steps,
             "save_strategy": "epoch",
             "save_total_limit": 1,
             "load_best_model_at_end": True,
@@ -99,18 +104,25 @@ class PhoBERTTrainer:
             "run_name": self.run_name,
             "disable_tqdm": False,
             "remove_unused_columns": False,
+            "dataloader_num_workers": int(self.config.get("dataloader_num_workers", 0)),
         }
+
+        if "logging_first_step" in params:
+            kwargs["logging_first_step"] = True
 
         if "eval_strategy" in params:
             kwargs["eval_strategy"] = "epoch"
         else:
             kwargs["evaluation_strategy"] = "epoch"
 
-        if "full_determinism" in params:
+        if "full_determinism" in params and bool(self.config.get("full_determinism", False)):
             kwargs["full_determinism"] = True
 
         if "save_only_model" in params:
             kwargs["save_only_model"] = True
+
+        if "optim" in params:
+            kwargs["optim"] = "adamw_torch"
 
         if torch.cuda.is_available() and not self.use_cpu:
             if "fp16" in params:

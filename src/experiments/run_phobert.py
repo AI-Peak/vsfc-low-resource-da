@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-checkpoints", action="store_true")
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--num-epochs", type=float, default=None)
+    parser.add_argument("--logging-steps", type=int, default=None)
     parser.add_argument("--max-train-samples", type=int, default=None)
     parser.add_argument("--max-dev-samples", type=int, default=None)
     parser.add_argument("--max-test-samples", type=int, default=None)
@@ -275,6 +276,7 @@ def run_phobert(
     keep_checkpoints: bool = False,
     model_name: str | None = None,
     num_epochs: float | None = None,
+    logging_steps: int | None = None,
     max_train_samples: int | None = None,
     max_dev_samples: int | None = None,
     max_test_samples: int | None = None,
@@ -310,6 +312,8 @@ def run_phobert(
         phobert_config["model_name"] = model_name
     if num_epochs is not None:
         phobert_config["num_epochs"] = num_epochs
+    if logging_steps is not None:
+        phobert_config["logging_steps"] = logging_steps
 
     base_train_df = load_train_subset(
         ratio=ratio,
@@ -467,6 +471,7 @@ def main() -> None:
         keep_checkpoints=args.keep_checkpoints,
         model_name=args.model_name,
         num_epochs=args.num_epochs,
+        logging_steps=args.logging_steps,
         max_train_samples=args.max_train_samples,
         max_dev_samples=args.max_dev_samples,
         max_test_samples=args.max_test_samples,

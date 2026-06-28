@@ -21,21 +21,19 @@ class VSFCDataset(Dataset):
         label_col: str = "sentiment",
     ) -> None:
         self.texts = frame[text_col].astype(str).tolist()
-        self.labels = frame[label_col].astype(int).tolist()
-        self.tokenizer = tokenizer
-        self.max_length = max_length
+        self.encodings = tokenizer(
+            self.texts,
+            truncation=True,
+            padding="max_length",
+            max_length=max_length,
+            return_tensors="pt",
+        )
+        self.labels = torch.tensor(frame[label_col].astype(int).tolist(), dtype=torch.long)
 
     def __len__(self) -> int:
         return len(self.texts)
 
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
-        encoded = self.tokenizer(
-            self.texts[index],
-            truncation=True,
-            padding="max_length",
-            max_length=self.max_length,
-            return_tensors="pt",
-        )
-        item = {key: value.squeeze(0) for key, value in encoded.items()}
-        item["labels"] = torch.tensor(self.labels[index], dtype=torch.long)
+        item = {key: value[index] for key, value in self.encodings.items()}
+        item["labels"] = self.labels[index]
         return item
