@@ -28,7 +28,7 @@ python scripts/check_gpu.py
 python scripts/setup_vncorenlp.py
 python scripts/download_data.py
 python -m src.data.subsample --train-csv data/raw/train.csv --seed 42
-python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting balanced --logging-steps 25
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting sqrt_balanced --logging-steps 25
 ```
 
 The notebook `notebooks/phase3_gpu_run.ipynb` contains the same flow for

@@ -186,7 +186,7 @@ class PhoBERTTrainer:
         if strategy in {"none", "false", "0", ""}:
             self.resolved_class_weights = None
             return None
-        if strategy != "balanced":
+        if strategy not in {"balanced", "sqrt_balanced"}:
             raise ValueError(f"Unsupported class_weighting strategy: {strategy}")
 
         labels = train_df["sentiment"].astype(int).to_numpy()
@@ -194,6 +194,8 @@ class PhoBERTTrainer:
         if np.any(counts == 0):
             raise ValueError(f"Cannot use balanced class weights with empty labels: {counts.tolist()}")
         weights = len(labels) / (self.num_labels * counts)
+        if strategy == "sqrt_balanced":
+            weights = np.sqrt(weights)
         self.resolved_class_weights = [float(weight) for weight in weights]
         return torch.tensor(weights, dtype=torch.float)
 

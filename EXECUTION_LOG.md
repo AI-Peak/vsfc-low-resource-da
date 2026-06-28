@@ -542,3 +542,29 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting balanced --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Class-Balanced Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting balanced --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used corrected full splits: `train=11426`, `dev=1583`, `test=3166`.
+- Dev macro-F1 peaked at epoch 3: `0.8694`.
+- Early stopping halted at epoch 6.
+- Final test macro-F1: `0.8336`.
+- Phase 3 acceptance status: failed gate because `0.8336 < 0.85`.
+
+Next action:
+
+- Full balanced weighting appears too aggressive for the neutral class and did
+  not generalize to test. Retry with square-root balanced weights, which keeps
+  a neutral-class correction but makes it less severe:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --class-weighting sqrt_balanced --logging-steps 25 --overwrite
+```

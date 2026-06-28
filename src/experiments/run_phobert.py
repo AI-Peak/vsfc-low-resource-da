@@ -54,7 +54,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=None)
     parser.add_argument("--warmup-ratio", type=float, default=None)
     parser.add_argument("--early-stopping-patience", type=int, default=None)
-    parser.add_argument("--class-weighting", choices=("none", "balanced"), default=None)
+    parser.add_argument(
+        "--class-weighting",
+        choices=("none", "balanced", "sqrt_balanced"),
+        default=None,
+    )
     parser.add_argument("--logging-steps", type=int, default=None)
     parser.add_argument("--max-train-samples", type=int, default=None)
     parser.add_argument("--max-dev-samples", type=int, default=None)
