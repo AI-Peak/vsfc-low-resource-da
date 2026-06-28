@@ -482,3 +482,32 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Full Gate Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run completed on Kaggle GPU with default PhoBERT epochs
+  (`num_epochs: 10`).
+- Final dev macro-F1 at epoch 10: `0.8698`.
+- Artifacts saved:
+  - `results/predictions/phobert_none_1.00_42.csv`
+  - `results/logs/phobert_none_1.00_42.json`
+  - `results/tables/figures/phobert_none_1.00_42_confusion_matrix.png`
+- Final test macro-F1: `0.8475`.
+- Phase 3 acceptance status: failed gate narrowly because `0.8475 < 0.85`.
+
+Next action:
+
+- Retry with a slightly longer training budget so early stopping can choose a
+  later best checkpoint:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --num-epochs 15 --logging-steps 25 --overwrite
+```
