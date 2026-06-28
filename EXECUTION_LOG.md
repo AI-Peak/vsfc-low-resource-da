@@ -644,3 +644,37 @@ Next action:
 ```bash
 python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --label-smoothing-factor 0.05 --decision-rule tune_logit_bias --logging-steps 25 --overwrite
 ```
+
+## Phase 3 Kaggle Label-Smoothing Retry
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --label-smoothing-factor 0.05 --decision-rule tune_logit_bias --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run used full splits: `train=11426`, `dev=1583`, `test=3166`.
+- Best dev macro-F1 before decision tuning reached `0.8620` at epoch 8.
+- Dev-tuned logit bias selected `bias=[0.0, 1.7, 1.15]` and reached
+  dev macro-F1 `0.8708`.
+- Final test macro-F1: `0.8476`.
+- Phase 3 acceptance status: failed gate because `0.8476 < 0.85`.
+
+Next action:
+
+- Single manual retries are not efficient at this point. Use the focused
+  recovery sweep, which keeps `augmentation=none`, `ratio=1.00`, and `seed=42`
+  fixed while trying a small set of controlled model-training variants:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass
+```
+
+- If the base sweep still misses the gate, include the larger PhoBERT
+  checkpoint as a final fallback:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --include-large
+```

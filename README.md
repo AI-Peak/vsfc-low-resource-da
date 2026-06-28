@@ -37,6 +37,22 @@ gate. On Kaggle, keep Internet on and use a GPU accelerator; the notebook
 defaults to a single visible T4 GPU to avoid multi-GPU `DataParallel` stalls.
 The Phase 3 gate is `test.macro_f1 >= 0.85` for `phobert_none_1.00_42`.
 
+If the default Phase 3 gate lands just below the threshold, run the focused
+recovery sweep:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass
+```
+
+If the base sweep still does not pass, retry with PhoBERT-large included:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --include-large
+```
+
+When the sweep prints `Final gate command to run`, run that command once to
+write the accepted `results/logs/phobert_none_1.00_42.json` artifact.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

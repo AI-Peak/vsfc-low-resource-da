@@ -51,6 +51,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--keep-checkpoints", action="store_true")
     parser.add_argument("--model-name", default=None)
+    parser.add_argument("--max-length", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--eval-batch-size", type=int, default=None)
     parser.add_argument("--num-epochs", type=float, default=None)
     parser.add_argument("--learning-rate", type=float, default=None)
     parser.add_argument("--weight-decay", type=float, default=None)
@@ -370,6 +373,9 @@ def run_phobert(
     use_cpu: bool | None = None,
     keep_checkpoints: bool = False,
     model_name: str | None = None,
+    max_length: int | None = None,
+    batch_size: int | None = None,
+    eval_batch_size: int | None = None,
     num_epochs: float | None = None,
     learning_rate: float | None = None,
     weight_decay: float | None = None,
@@ -415,6 +421,12 @@ def run_phobert(
     base_config, phobert_config = read_configs(base_config_path, phobert_config_path)
     if model_name:
         phobert_config["model_name"] = model_name
+    if max_length is not None:
+        phobert_config["max_length"] = max_length
+    if batch_size is not None:
+        phobert_config["batch_size"] = batch_size
+    if eval_batch_size is not None:
+        phobert_config["eval_batch_size"] = eval_batch_size
     if num_epochs is not None:
         phobert_config["num_epochs"] = num_epochs
     if learning_rate is not None:
@@ -625,6 +637,9 @@ def main() -> None:
         use_cpu=True if args.cpu else None,
         keep_checkpoints=args.keep_checkpoints,
         model_name=args.model_name,
+        max_length=args.max_length,
+        batch_size=args.batch_size,
+        eval_batch_size=args.eval_batch_size,
         num_epochs=args.num_epochs,
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
