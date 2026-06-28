@@ -428,7 +428,8 @@ Remediation implemented:
   - pulls the latest GitHub code when an existing Kaggle clone is present;
   - checks that installed `transformers` is 4.x after `pip install`;
   - runs a tiny GPU smoke test before the full Phase 3 gate;
-  - runs the full gate with `--num-epochs 5 --logging-steps 25`.
+  - runs the full gate with default PhoBERT epochs from `configs/phobert.yaml`
+    and `--logging-steps 25`.
 - Added a Kaggle-side safeguard in `PhoBERTTrainer` so even an older imported
   notebook defaults to one visible GPU unless `VSFC_USE_ALL_GPUS=1` is set.
 - Pinned `peft==0.7.1` after Kaggle smoke test exposed an import mismatch:
@@ -447,3 +448,37 @@ Next action:
 - Rerun Kaggle from the updated GitHub notebook/repo.
 - If the smoke test does not show step logs within a few minutes, stop the run
   and inspect the new log immediately instead of waiting for the 12-hour limit.
+
+## Phase 3 Kaggle Full Gate Attempt
+
+Command:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --num-epochs 5 --logging-steps 25 --overwrite
+```
+
+Result:
+
+- The run completed on Kaggle GPU with corrected full splits:
+  `train=11426`, `dev=1583`, `test=3166`.
+- Dev macro-F1 by epoch:
+  - epoch 1: `0.8262`
+  - epoch 2: `0.8551`
+  - epoch 3: `0.8497`
+  - epoch 4: `0.8541`
+  - epoch 5: `0.8530`
+- Artifacts saved:
+  - `results/predictions/phobert_none_1.00_42.csv`
+  - `results/logs/phobert_none_1.00_42.json`
+  - `results/tables/figures/phobert_none_1.00_42_confusion_matrix.png`
+- Final test macro-F1: `0.8340`.
+- Phase 3 acceptance status: failed gate because `0.8340 < 0.85`.
+
+Next action:
+
+- Rerun the full gate with the default PhoBERT config (`num_epochs: 10`) before
+  moving to augmentation:
+
+```bash
+python -m src.experiments.run_phobert --ratio 1.00 --seed 42 --augmentation none --logging-steps 25 --overwrite
+```
