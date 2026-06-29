@@ -165,6 +165,15 @@ python scripts/generate_antigravity_paraphrase.py --ratio 0.05 --seed 42 --force
 python scripts/phase5_llm.py --ratios 0.05 --seed 42 --skip-generation --overwrite
 ```
 
+Observed Phase 5 pilot test macro-F1:
+
+| Ratio | None | EDA | LLM Raw | Delta vs None | Delta vs EDA |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | 0.7563 | 0.7641 | 0.7864 | +0.0301 | +0.0223 |
+
+Conclusion: the local paraphrase fallback improved the 5% low-resource
+setting over both the no-augmentation and EDA baselines.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

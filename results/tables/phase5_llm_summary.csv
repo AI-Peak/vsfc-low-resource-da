@@ -1,0 +1,2 @@
+ratio,none_macro_f1,eda_macro_f1,llm_raw_macro_f1,delta_vs_none,delta_vs_eda,method,notes
+0.05,0.7563,0.7641,0.7864,0.0301,0.0223,paraphrase_local,Gemini quota fallback; raw LLM-compatible file generated locally

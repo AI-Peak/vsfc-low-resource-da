@@ -1061,3 +1061,31 @@ Local validation for `data/augmented/llm_raw_0.05_42.csv`:
   `augmented_sentence`, `label`, `method`, `ratio`, `seed`, `model`
 - duplicate augmented sentence/label pairs: `0`
 - unchanged augmented sentences: `0`
+
+## Phase 5 Kaggle Result
+
+Command:
+
+```bash
+python scripts/phase5_llm.py --ratios 0.05 --seed 42 --skip-generation --overwrite
+```
+
+Result:
+
+| Ratio | None macro-F1 | EDA macro-F1 | LLM raw macro-F1 | Delta vs None | Delta vs EDA |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | `0.7563` | `0.7641` | `0.7864` | `+0.0301` | `+0.0223` |
+
+Artifacts generated on Kaggle:
+
+- `results/logs/phobert_llm_paraphrase_raw_0.05_42.json`
+- `results/predictions/phobert_llm_paraphrase_raw_0.05_42.csv`
+- `results/tables/figures/phobert_llm_paraphrase_raw_0.05_42_confusion_matrix.png`
+- `results/tables/phase5_llm_summary.csv`
+- `results/tables/phase5_llm_summary.md`
+
+Conclusion:
+
+- Gemini free-tier quota prevented full API-based LLM paraphrase generation.
+- The local paraphrase fallback was evaluated as a 5% pilot.
+- It improved test macro-F1 over both no augmentation and EDA at ratio `0.05`.
