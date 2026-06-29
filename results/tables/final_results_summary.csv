@@ -1,0 +1,10 @@
+phase,ratio,method,macro_f1,delta_vs_none,notes
+Phase 4,0.05,eda,0.7641,0.0078,improved
+Phase 6,0.05,llm_paraphrase_filtered,0.7752,0.0189,Filtered LLM improves over none and EDA but underperforms the raw LLM pilot
+Phase 5,0.05,llm_paraphrase_raw,0.7864,0.0301,paraphrase_local
+Phase 4,0.05,none,0.7563,0.0,low-resource baseline
+Phase 4,0.10,eda,0.7956,-0.0275,worse
+Phase 4,0.10,none,0.8231,0.0,low-resource baseline
+Phase 4,0.20,eda,0.8208,0.0059,improved
+Phase 4,0.20,none,0.8149,0.0,low-resource baseline
+Phase 3,1.00,none,0.8478276168,0.0,near-gate 100% PhoBERT baseline; gate was 0.85

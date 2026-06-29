@@ -236,6 +236,18 @@ This writes `results/tables/significance_tests.csv` and
 bootstrap p-values are available; paired t-tests across seeds are reported as
 unavailable until at least two paired seeds exist.
 
+## Phase 9 Final Analysis
+
+Generate the final report tables, drift analysis, and macro-F1 figure:
+
+```bash
+python scripts/phase9_report.py
+```
+
+This writes `results/tables/final_results_summary.csv`,
+`results/tables/final_report.md`, `results/tables/drift_analysis.csv`, and
+`results/tables/figures/phase9_macro_f1_by_ratio.png`.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

@@ -1216,3 +1216,26 @@ Next action on Kaggle after pulling:
 ```bash
 python scripts/run_significance_tests.py
 ```
+
+## Phase 9 Final Analysis Implementation
+
+Remediation implemented:
+
+- Implemented `src/experiments/analyze_drift.py`.
+  - Summarizes Phase 6 filter/drop rates overall and per class.
+  - Writes `results/tables/drift_analysis.csv`,
+    `results/tables/drift_analysis_by_class.csv`, and
+    `results/tables/drift_analysis.md`.
+- Implemented `src/evaluation/reporter.py` helpers for Markdown reports.
+- Added `scripts/phase9_report.py`.
+  - Collects final Phase 3-6 metrics from committed summary tables.
+  - Writes `results/tables/final_results_summary.csv`.
+  - Writes `results/tables/final_report.md`.
+  - Writes `results/tables/figures/phase9_macro_f1_by_ratio.png`.
+
+Next action on Kaggle after pulling:
+
+```bash
+python scripts/phase9_report.py
+cat results/tables/final_report.md
+```

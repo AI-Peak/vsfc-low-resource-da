@@ -1,0 +1,2 @@
+ratio,seed,raw_rows,kept_rows,dropped_rows,keep_rate,drop_rate,drop_reasons,interpretation
+0.05,42,571,564,7,0.9877408056042032,0.012259194395796813,low_token_overlap=1; too_long_relative=6,low observed filter-risk rate; filtering was conservative
