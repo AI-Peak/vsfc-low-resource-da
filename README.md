@@ -128,6 +128,35 @@ Observed Phase 4 test macro-F1:
 Conclusion: conservative EDA has a mixed effect. It improves the 5% and 20%
 settings, but hurts the 10% setting.
 
+## Phase 5 LLM Paraphrase Augmentation
+
+Phase 5 uses Gemini to generate label-preserving paraphrases. On Kaggle, add a
+secret named `GEMINI_API_KEY`, then load it in a notebook cell:
+
+```python
+from kaggle_secrets import UserSecretsClient
+import os
+
+os.environ["GEMINI_API_KEY"] = UserSecretsClient().get_secret("GEMINI_API_KEY")
+```
+
+Generate raw LLM paraphrases. The script is resumable, so rerunning continues
+from completed `source_index` rows:
+
+```bash
+python scripts/generate_llm_paraphrase.py --ratios 0.05 --seed 42 --max-rows 3 --force --request-sleep-seconds 0.5
+```
+
+```bash
+python scripts/generate_llm_paraphrase.py --ratios 0.05 0.10 0.20 --seed 42 --request-sleep-seconds 0.5
+```
+
+After `data/augmented/llm_raw_{ratio}_{seed}.csv` files exist, run PhoBERT:
+
+```bash
+python scripts/phase5_llm.py --ratios 0.05 0.10 0.20 --seed 42 --skip-generation --overwrite
+```
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

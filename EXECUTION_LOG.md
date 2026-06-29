@@ -999,3 +999,44 @@ Remediation implemented:
 
 - Added `scripts/summarize_phase4.py` to regenerate the Phase 4 summary table
   from JSON logs.
+
+## Phase 5 LLM Paraphrase Implementation
+
+Remediation implemented:
+
+- Implemented `src/augmentation/prompts.py` with strict label-preserving
+  Vietnamese paraphrase prompts.
+- Implemented `src/augmentation/llm_paraphrase.py` with a Gemini wrapper,
+  response parsing, retry handling, and deduplication.
+- Added `scripts/generate_llm_paraphrase.py` to generate resumable raw LLM
+  augmentation files:
+  `data/augmented/llm_raw_{ratio}_{seed}.csv`.
+- Added `scripts/phase5_llm.py` to run PhoBERT with
+  `--augmentation llm_paraphrase_raw`.
+
+Next action on Kaggle:
+
+```python
+from kaggle_secrets import UserSecretsClient
+import os
+
+os.environ["GEMINI_API_KEY"] = UserSecretsClient().get_secret("GEMINI_API_KEY")
+```
+
+Small API smoke test:
+
+```bash
+python scripts/generate_llm_paraphrase.py --ratios 0.05 --seed 42 --max-rows 3 --force --request-sleep-seconds 0.5
+```
+
+Full Phase 5 data generation:
+
+```bash
+python scripts/generate_llm_paraphrase.py --ratios 0.05 0.10 0.20 --seed 42 --request-sleep-seconds 0.5
+```
+
+Train Phase 5 PhoBERT after raw files exist:
+
+```bash
+python scripts/phase5_llm.py --ratios 0.05 0.10 0.20 --seed 42 --skip-generation --overwrite
+```
