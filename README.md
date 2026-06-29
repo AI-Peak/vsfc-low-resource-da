@@ -111,6 +111,23 @@ comparison, add `--include-baseline`:
 python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --include-baseline --overwrite
 ```
 
+Summarize Phase 4 metrics from generated JSON logs:
+
+```bash
+python scripts/summarize_phase4.py
+```
+
+Observed Phase 4 test macro-F1:
+
+| Ratio | None | EDA | Delta |
+|---:|---:|---:|---:|
+| 0.05 | 0.7563 | 0.7641 | +0.0078 |
+| 0.10 | 0.8231 | 0.7956 | -0.0275 |
+| 0.20 | 0.8149 | 0.8208 | +0.0059 |
+
+Conclusion: conservative EDA has a mixed effect. It improves the 5% and 20%
+settings, but hurts the 10% setting.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

@@ -1,0 +1,4 @@
+ratio,none_macro_f1,eda_macro_f1,delta_macro_f1,outcome
+0.05,0.7563,0.7641,0.0078,improved
+0.10,0.8231,0.7956,-0.0275,worse
+0.20,0.8149,0.8208,0.0059,improved

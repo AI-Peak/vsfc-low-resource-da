@@ -957,3 +957,45 @@ Optional matching low-resource no-augmentation baselines:
 ```bash
 python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --include-baseline --overwrite
 ```
+
+## Phase 4 Kaggle Result
+
+Commands:
+
+```bash
+python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --overwrite
+python -m src.experiments.run_phobert --ratio 0.05 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25
+python -m src.experiments.run_phobert --ratio 0.10 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25
+python -m src.experiments.run_phobert --ratio 0.20 --seed 42 --augmentation none --decision-rule tune_logit_bias --logging-steps 25
+```
+
+Result:
+
+| Ratio | None macro-F1 | EDA macro-F1 | Delta |
+|---:|---:|---:|---:|
+| 0.05 | `0.7563` | `0.7641` | `+0.0078` |
+| 0.10 | `0.8231` | `0.7956` | `-0.0275` |
+| 0.20 | `0.8149` | `0.8208` | `+0.0059` |
+
+Artifacts:
+
+- `results/logs/phobert_none_0.05_42.json`
+- `results/logs/phobert_none_0.10_42.json`
+- `results/logs/phobert_none_0.20_42.json`
+- `results/logs/phobert_eda_0.05_42.json`
+- `results/logs/phobert_eda_0.10_42.json`
+- `results/logs/phobert_eda_0.20_42.json`
+- `results/tables/phase4_eda_summary.csv`
+- `results/tables/phase4_eda_summary.md`
+
+Conclusion:
+
+- Conservative EDA has a mixed effect on PhoBERT low-resource training.
+- EDA improves `0.05` and `0.20` ratios slightly.
+- EDA hurts the `0.10` ratio, so this augmentation should not be reported as
+  uniformly beneficial.
+
+Remediation implemented:
+
+- Added `scripts/summarize_phase4.py` to regenerate the Phase 4 summary table
+  from JSON logs.
