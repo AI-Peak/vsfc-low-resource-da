@@ -223,6 +223,19 @@ python -m src.experiments.run_all --include-full-none
 `run_all` skips existing artifacts and, by default, skips missing augmentation
 CSV files instead of failing the whole matrix.
 
+## Phase 8 Significance Testing
+
+Run paired bootstrap tests for all available prediction pairs:
+
+```bash
+python scripts/run_significance_tests.py
+```
+
+This writes `results/tables/significance_tests.csv` and
+`results/tables/significance_tests.md`. With the current single-seed pilot,
+bootstrap p-values are available; paired t-tests across seeds are reported as
+unavailable until at least two paired seeds exist.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

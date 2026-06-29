@@ -1194,3 +1194,25 @@ Optional dry run for remaining GPU jobs:
 ```bash
 python -m src.experiments.run_all --dry-run
 ```
+
+## Phase 8 Statistical Testing Implementation
+
+Remediation implemented:
+
+- Implemented `src/evaluation/stats_test.py`.
+  - Added paired bootstrap testing over test-set predictions.
+  - Added paired t-test across seeds, returning unavailable values when only a
+    single paired seed exists.
+- Added `scripts/run_significance_tests.py`.
+  - Loads available `results/predictions/phobert_*.csv` artifacts.
+  - Runs the planned method comparisons when both sides exist for a ratio.
+  - Applies Bonferroni correction over available comparisons.
+  - Writes:
+    - `results/tables/significance_tests.csv`
+    - `results/tables/significance_tests.md`
+
+Next action on Kaggle after pulling:
+
+```bash
+python scripts/run_significance_tests.py
+```
