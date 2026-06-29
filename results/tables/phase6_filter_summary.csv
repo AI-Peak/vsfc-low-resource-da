@@ -1,0 +1,2 @@
+ratio,raw_rows,kept_rows,dropped_rows,keep_rate,label_counts,filtered_path
+0.05,571,564,7,0.9877408056042032,"{0: 262, 1: 21, 2: 281}",data\augmented\llm_filtered_0.05_42.csv

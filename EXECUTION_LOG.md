@@ -1089,3 +1089,39 @@ Conclusion:
 - Gemini free-tier quota prevented full API-based LLM paraphrase generation.
 - The local paraphrase fallback was evaluated as a 5% pilot.
 - It improved test macro-F1 over both no augmentation and EDA at ratio `0.05`.
+
+## Phase 6 Filtering Implementation
+
+Remediation implemented:
+
+- Replaced the Phase 6 stub in `src/augmentation/filter.py` with conservative
+  heuristic QC utilities.
+- Added `scripts/filter_llm_paraphrase.py` to create
+  `data/augmented/llm_filtered_{ratio}_{seed}.csv` and QC diagnostics.
+- Added `scripts/phase6_filter.py` to run filtering and then PhoBERT with
+  `--augmentation llm_paraphrase_filtered`.
+- Extended `configs/augmentation.yaml` with Phase 6 filter thresholds.
+
+Next action on Kaggle:
+
+```bash
+python scripts/phase6_filter.py --ratios 0.05 --seed 42 --overwrite
+```
+
+Expected output artifacts:
+
+- `data/augmented/llm_filtered_0.05_42.csv`
+- `results/tables/phase6_filter_qc_0.05_42.csv`
+- `results/tables/phase6_filter_summary.csv`
+- `results/tables/phase6_filter_summary.md`
+- `results/logs/phobert_llm_paraphrase_filtered_0.05_42.json`
+- `results/predictions/phobert_llm_paraphrase_filtered_0.05_42.csv`
+
+Local filtering validation:
+
+- raw rows: `571`
+- kept rows: `564`
+- dropped rows: `7`
+- keep rate: `0.9877`
+- kept label counts: `{0: 262, 1: 21, 2: 281}`
+- drop reasons: `too_long_relative=6`, `low_token_overlap=1`

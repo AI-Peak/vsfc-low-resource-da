@@ -17,3 +17,7 @@ llm:
 filter:
   judge_model_path: "results/judge/best_model"
   confidence_threshold: 0.70
+  min_length_ratio: 0.45
+  max_length_ratio: 2.20
+  min_token_overlap: 0.20
+  min_augmented_tokens: 2

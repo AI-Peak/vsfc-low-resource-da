@@ -174,6 +174,23 @@ Observed Phase 5 pilot test macro-F1:
 Conclusion: the local paraphrase fallback improved the 5% low-resource
 setting over both the no-augmentation and EDA baselines.
 
+## Phase 6 Filtering / Quality Control
+
+Filter raw LLM paraphrases and run PhoBERT on the filtered file:
+
+```bash
+python scripts/phase6_filter.py --ratios 0.05 --seed 42 --overwrite
+```
+
+For filtering only:
+
+```bash
+python scripts/filter_llm_paraphrase.py --ratios 0.05 --seed 42 --force
+```
+
+This writes `data/augmented/llm_filtered_0.05_42.csv` plus QC summaries under
+`results/tables/`.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.
