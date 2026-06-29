@@ -8,7 +8,7 @@ Generated at: 2026-06-27 13:00:02 +07:00
 - Gemini API usage: none.
 - Cloud/GPU usage: none.
 - Package/data/model downloads: free public downloads only.
-- Estimated direct money spent by Codex work so far: 0 VND.
+- Estimated direct money spent by Antigravity work so far: 0 VND.
 
 Downloaded/cached resources:
 
@@ -23,7 +23,7 @@ Status: completed and verified.
 
 Actions:
 
-- Read `codex_execution_plan.md`.
+- Read `execution_plan.md`.
 - Created project directory `vsfc-low-resource-da/`.
 - Created repository structure:
   - `configs/`
@@ -1040,3 +1040,24 @@ Train Phase 5 PhoBERT after raw files exist:
 ```bash
 python scripts/phase5_llm.py --ratios 0.05 0.10 0.20 --seed 42 --skip-generation --overwrite
 ```
+
+## Phase 5 Local Paraphrase Fallback
+
+Gemini free-tier quota can block full paraphrase generation after a small
+number of requests. Added `scripts/generate_antigravity_paraphrase.py` as an offline
+fallback for the 5% split. It creates a raw LLM-compatible augmentation file
+without external API calls:
+
+```bash
+python scripts/generate_antigravity_paraphrase.py --ratio 0.05 --seed 42 --force
+python scripts/phase5_llm.py --ratios 0.05 --seed 42 --skip-generation --overwrite
+```
+
+Local validation for `data/augmented/llm_raw_0.05_42.csv`:
+
+- rows: `571`
+- label counts: `{0: 266, 1: 23, 2: 282}`
+- required columns: `source_index`, `original_sentence`,
+  `augmented_sentence`, `label`, `method`, `ratio`, `seed`, `model`
+- duplicate augmented sentence/label pairs: `0`
+- unchanged augmented sentences: `0`

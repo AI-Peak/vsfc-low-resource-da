@@ -6,7 +6,7 @@ student feedback sentiment classification.
 ## Scope
 
 This repository is organized around the execution plan in
-`../codex_execution_plan.md`. The initial bootstrap includes reproducible
+`../execution_plan.md`. The initial bootstrap includes reproducible
 configuration, utility helpers, and the project layout needed for later data,
 augmentation, training, and analysis phases.
 
@@ -155,6 +155,14 @@ After `data/augmented/llm_raw_{ratio}_{seed}.csv` files exist, run PhoBERT:
 
 ```bash
 python scripts/phase5_llm.py --ratios 0.05 0.10 0.20 --seed 42 --skip-generation --overwrite
+```
+
+If Gemini quota blocks full generation, run the local paraphrase pilot for
+the 5% split:
+
+```bash
+python scripts/generate_antigravity_paraphrase.py --ratio 0.05 --seed 42 --force
+python scripts/phase5_llm.py --ratios 0.05 --seed 42 --skip-generation --overwrite
 ```
 
 ## Directory Overview
