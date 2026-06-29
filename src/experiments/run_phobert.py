@@ -66,6 +66,13 @@ def parse_args() -> argparse.Namespace:
         choices=("none", "balanced", "sqrt_balanced"),
         default=None,
     )
+    parser.add_argument("--class-weight-values", default=None)
+    parser.add_argument(
+        "--loss-type",
+        choices=("cross_entropy", "focal"),
+        default=None,
+    )
+    parser.add_argument("--focal-gamma", type=float, default=None)
     parser.add_argument("--logging-steps", type=int, default=None)
     parser.add_argument("--max-train-samples", type=int, default=None)
     parser.add_argument("--max-dev-samples", type=int, default=None)
@@ -472,6 +479,9 @@ def run_phobert(
     early_stopping_patience: int | None = None,
     metric_for_best_model: str | None = None,
     class_weighting: str | None = None,
+    class_weight_values: str | None = None,
+    loss_type: str | None = None,
+    focal_gamma: float | None = None,
     logging_steps: int | None = None,
     max_train_samples: int | None = None,
     max_dev_samples: int | None = None,
@@ -533,6 +543,12 @@ def run_phobert(
         phobert_config["metric_for_best_model"] = metric_for_best_model
     if class_weighting is not None:
         phobert_config["class_weighting"] = class_weighting
+    if class_weight_values is not None:
+        phobert_config["class_weight_values"] = class_weight_values
+    if loss_type is not None:
+        phobert_config["loss_type"] = loss_type
+    if focal_gamma is not None:
+        phobert_config["focal_gamma"] = focal_gamma
     if logging_steps is not None:
         phobert_config["logging_steps"] = logging_steps
 
@@ -768,6 +784,9 @@ def main() -> None:
         early_stopping_patience=args.early_stopping_patience,
         metric_for_best_model=args.metric_for_best_model,
         class_weighting=args.class_weighting,
+        class_weight_values=args.class_weight_values,
+        loss_type=args.loss_type,
+        focal_gamma=args.focal_gamma,
         logging_steps=args.logging_steps,
         max_train_samples=args.max_train_samples,
         max_dev_samples=args.max_dev_samples,

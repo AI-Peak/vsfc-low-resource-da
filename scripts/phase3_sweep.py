@@ -121,6 +121,34 @@ CALIBRATION_RUNS: tuple[SweepRun, ...] = (
     ),
 )
 
+NEUTRAL_LOSS_RUNS: tuple[SweepRun, ...] = (
+    SweepRun(
+        "base_neutral_weight_115",
+        ("--class-weight-values", "1.0,1.15,1.0", "--logit-bias-step", "0.01"),
+    ),
+    SweepRun(
+        "base_neutral_weight_130",
+        ("--class-weight-values", "1.0,1.30,1.0", "--logit-bias-step", "0.01"),
+    ),
+    SweepRun(
+        "base_focal_gamma_075",
+        ("--loss-type", "focal", "--focal-gamma", "0.75", "--logit-bias-step", "0.01"),
+    ),
+    SweepRun(
+        "base_focal_gamma_075_neutral_weight_115",
+        (
+            "--loss-type",
+            "focal",
+            "--focal-gamma",
+            "0.75",
+            "--class-weight-values",
+            "1.0,1.15,1.0",
+            "--logit-bias-step",
+            "0.01",
+        ),
+    ),
+)
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a focused Phase 3 sweep.")
     parser.add_argument("--results-dir", default="results/phase3_sweep")
@@ -135,6 +163,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--last-mile-only", action="store_true")
     parser.add_argument("--include-calibration", action="store_true")
     parser.add_argument("--calibration-only", action="store_true")
+    parser.add_argument("--include-neutral-loss", action="store_true")
+    parser.add_argument("--neutral-loss-only", action="store_true")
     parser.add_argument("--stop-on-pass", action="store_true")
     return parser.parse_args()
 
@@ -199,14 +229,17 @@ def main() -> None:
         args.v2_only,
         args.last_mile_only,
         args.calibration_only,
+        args.neutral_loss_only,
     ]
     if sum(bool(value) for value in exclusive_modes) > 1:
         raise ValueError(
             "Choose only one of --large-only, --v2-only, "
-            "--last-mile-only, or --calibration-only."
+            "--last-mile-only, --calibration-only, or --neutral-loss-only."
         )
 
-    if args.calibration_only:
+    if args.neutral_loss_only:
+        runs = list(NEUTRAL_LOSS_RUNS)
+    elif args.calibration_only:
         runs = list(CALIBRATION_RUNS)
     elif args.last_mile_only:
         runs = list(LAST_MILE_RUNS)
@@ -224,6 +257,8 @@ def main() -> None:
         runs.extend(LAST_MILE_RUNS)
     if args.include_calibration and not args.calibration_only:
         runs.extend(CALIBRATION_RUNS)
+    if args.include_neutral_loss and not args.neutral_loss_only:
+        runs.extend(NEUTRAL_LOSS_RUNS)
     if args.max_runs is not None:
         runs = runs[: args.max_runs]
 
@@ -297,7 +332,7 @@ def main() -> None:
             "\nNo pass candidate yet. Use --large-only if only the base sweep is done, "
             "--v2-only if base and large are done, or --last-mile-only if base, "
             "large, and v2 are already done. Use --calibration-only after "
-            "last-mile misses.",
+            "last-mile misses. Use --neutral-loss-only after calibration misses.",
             flush=True,
         )
 

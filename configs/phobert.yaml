@@ -13,3 +13,6 @@ logging_steps: 50
 dataloader_num_workers: 0
 full_determinism: false
 class_weighting: "none"
+class_weight_values: null
+loss_type: "cross_entropy"
+focal_gamma: 1.0

@@ -72,6 +72,14 @@ If the last-mile sweep still misses the gate, run the affine-calibration sweep:
 python scripts/phase3_sweep.py --stop-on-pass --calibration-only
 ```
 
+If affine calibration also misses the gate, run the neutral-loss sweep. This
+keeps `augmentation=none`, `ratio=1.00`, and `seed=42`, but tries mild
+neutral-class loss adjustments:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --neutral-loss-only
+```
+
 When the sweep prints `Final gate command to run`, run that command once to
 write the accepted `results/logs/phobert_none_1.00_42.json` artifact.
 

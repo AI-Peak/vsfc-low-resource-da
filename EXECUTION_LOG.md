@@ -860,3 +860,44 @@ Next action:
 pip install -r requirements.txt
 python scripts/phase3_sweep.py --stop-on-pass --calibration-only
 ```
+
+## Phase 3 Kaggle Calibration Result
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --calibration-only
+```
+
+Result:
+
+- Best calibration result remained `base_affine_scale_bias`.
+- Dev macro-F1: `0.8860`.
+- Test macro-F1: `0.8478`.
+- Neutral-class test F1: `0.6280`.
+- The affine search selected the same effective decision boundary as the
+  previous best (`scale=[1.0, 1.0, 1.0]`, `bias=[0.0, -0.3, 1.1]`).
+- Phase 3 acceptance status: failed gate because `0.8478 < 0.85`.
+
+Conclusion:
+
+- The remaining bottleneck is not backbone selection, checkpoint selection, or
+  dev-tuned logit calibration.
+- Test macro-F1 is limited by the small neutral class. Labels 0 and 2 are both
+  near F1 `0.958`, while label 1 is near F1 `0.628`.
+- Balanced and sqrt-balanced class weighting were too strong, so the next
+  attempt should test mild neutral-class loss pressure.
+
+Remediation implemented:
+
+- Added optional manual class weights through `--class-weight-values`.
+- Added focal loss through `--loss-type focal --focal-gamma ...`.
+- Added `--neutral-loss-only` to `scripts/phase3_sweep.py`.
+- The new sweep keeps `augmentation=none`, `ratio=1.00`, and `seed=42` fixed,
+  then tests mild neutral weighting and light focal loss.
+
+Next action:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --neutral-loss-only
+```

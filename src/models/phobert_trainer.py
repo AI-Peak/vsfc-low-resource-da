@@ -47,6 +47,9 @@ DEFAULT_PHOBERT_CONFIG: dict[str, Any] = {
     "dataloader_num_workers": 0,
     "full_determinism": False,
     "class_weighting": "none",
+    "class_weight_values": None,
+    "loss_type": "cross_entropy",
+    "focal_gamma": 1.0,
 }
 
 
@@ -59,12 +62,21 @@ class PhoBERTPredictionOutput:
     logits: np.ndarray
 
 
-class WeightedLossTrainer(Trainer):
-    """Trainer variant with optional class-weighted cross-entropy."""
+class CustomLossTrainer(Trainer):
+    """Trainer variant with optional class weights and focal loss."""
 
-    def __init__(self, *args: Any, class_weights: torch.Tensor | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        class_weights: torch.Tensor | None = None,
+        loss_type: str = "cross_entropy",
+        focal_gamma: float = 1.0,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.class_weights = class_weights
+        self.loss_type = loss_type.lower()
+        self.focal_gamma = float(focal_gamma)
 
     def compute_loss(
         self,
@@ -73,7 +85,11 @@ class WeightedLossTrainer(Trainer):
         return_outputs: bool = False,
         **_: Any,
     ):
-        if self.class_weights is None or "labels" not in inputs:
+        uses_default_loss = self.class_weights is None and self.loss_type in {
+            "cross_entropy",
+            "ce",
+        }
+        if uses_default_loss or "labels" not in inputs:
             return super().compute_loss(model, inputs, return_outputs=return_outputs)
 
         labels = inputs["labels"]
@@ -81,8 +97,25 @@ class WeightedLossTrainer(Trainer):
         model_inputs.pop("labels", None)
         outputs = model(**model_inputs)
         logits = outputs.logits
-        loss_fn = nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
-        loss = loss_fn(logits.view(-1, model.config.num_labels), labels.view(-1))
+        flat_logits = logits.view(-1, model.config.num_labels)
+        flat_labels = labels.view(-1)
+        class_weights = (
+            self.class_weights.to(logits.device) if self.class_weights is not None else None
+        )
+
+        if self.loss_type in {"cross_entropy", "ce"}:
+            loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+            loss = loss_fn(flat_logits, flat_labels)
+        elif self.loss_type == "focal":
+            log_probs = nn.functional.log_softmax(flat_logits, dim=-1)
+            log_pt = log_probs.gather(1, flat_labels.unsqueeze(1)).squeeze(1)
+            pt = log_pt.exp()
+            loss = -((1.0 - pt) ** self.focal_gamma) * log_pt
+            if class_weights is not None:
+                loss = loss * class_weights.gather(0, flat_labels)
+            loss = loss.mean()
+        else:
+            raise ValueError(f"Unsupported loss_type: {self.loss_type}")
         return (loss, outputs) if return_outputs else loss
 
 
@@ -119,6 +152,25 @@ class PhoBERTTrainer:
             num_labels=self.num_labels,
         )
         self.trainer: Trainer | None = None
+
+    def _manual_class_weights(self) -> list[float] | None:
+        raw_values = self.config.get("class_weight_values")
+        if raw_values is None:
+            return None
+        if isinstance(raw_values, str):
+            if raw_values.strip().lower() in {"", "none"}:
+                return None
+            values = [float(value.strip()) for value in raw_values.split(",") if value.strip()]
+        else:
+            values = [float(value) for value in raw_values]
+        if len(values) != self.num_labels:
+            raise ValueError(
+                "class_weight_values must contain "
+                f"{self.num_labels} values, got {values}"
+            )
+        if any(value <= 0 for value in values):
+            raise ValueError(f"class_weight_values must be positive, got {values}")
+        return values
 
     def _training_arguments(self) -> TrainingArguments:
         params = inspect.signature(TrainingArguments.__init__).parameters
@@ -184,6 +236,11 @@ class PhoBERTTrainer:
         )
 
     def _compute_class_weights(self, train_df: pd.DataFrame) -> torch.Tensor | None:
+        manual_weights = self._manual_class_weights()
+        if manual_weights is not None:
+            self.resolved_class_weights = manual_weights
+            return torch.tensor(manual_weights, dtype=torch.float)
+
         strategy = str(self.config.get("class_weighting", "none")).lower()
         if strategy in {"none", "false", "0", ""}:
             self.resolved_class_weights = None
@@ -234,12 +291,20 @@ class PhoBERTTrainer:
         dev_dataset = self._make_dataset(dev_df)
         args = self._training_arguments()
         class_weights = self._compute_class_weights(train_df)
+        loss_type = str(self.config.get("loss_type", "cross_entropy")).lower()
+        focal_gamma = float(self.config.get("focal_gamma", 1.0))
+        if loss_type not in {"cross_entropy", "ce", "focal"}:
+            raise ValueError(f"Unsupported loss_type: {loss_type}")
         callbacks = [
             EarlyStoppingCallback(
                 early_stopping_patience=int(self.config["early_stopping_patience"])
             )
         ]
-        trainer_cls = WeightedLossTrainer if class_weights is not None else Trainer
+        trainer_cls = (
+            CustomLossTrainer
+            if class_weights is not None or loss_type == "focal"
+            else Trainer
+        )
         trainer_kwargs: dict[str, Any] = {
             "model": self.model,
             "args": args,
@@ -249,8 +314,10 @@ class PhoBERTTrainer:
             "callbacks": callbacks,
             **self._trainer_kwargs(),
         }
-        if class_weights is not None:
+        if trainer_cls is CustomLossTrainer:
             trainer_kwargs["class_weights"] = class_weights
+            trainer_kwargs["loss_type"] = loss_type
+            trainer_kwargs["focal_gamma"] = focal_gamma
 
         self.trainer = trainer_cls(**trainer_kwargs)
         self.trainer.train()
@@ -291,7 +358,10 @@ class PhoBERTTrainer:
             {
                 "model_name": self.config["model_name"],
                 "class_weighting": self.config.get("class_weighting", "none"),
+                "class_weight_values": self.config.get("class_weight_values"),
                 "class_weights": self.resolved_class_weights,
+                "loss_type": self.config.get("loss_type", "cross_entropy"),
+                "focal_gamma": self.config.get("focal_gamma", 1.0),
                 "num_labels": self.num_labels,
                 "seed": self.seed,
                 "run_name": self.run_name,
