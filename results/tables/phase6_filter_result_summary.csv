@@ -1,0 +1,2 @@
+ratio,none_macro_f1,eda_macro_f1,llm_raw_macro_f1,llm_filtered_macro_f1,delta_filtered_vs_none,delta_filtered_vs_eda,delta_filtered_vs_raw,raw_rows,kept_rows,dropped_rows,keep_rate,notes
+0.05,0.7563,0.7641,0.7864,0.7752,0.0189,0.0111,-0.0112,571,564,7,0.9877,Filtered LLM improves over none and EDA but underperforms the raw LLM pilot

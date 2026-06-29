@@ -191,6 +191,38 @@ python scripts/filter_llm_paraphrase.py --ratios 0.05 --seed 42 --force
 This writes `data/augmented/llm_filtered_0.05_42.csv` plus QC summaries under
 `results/tables/`.
 
+Observed Phase 6 filtered-LLM result:
+
+| Ratio | None | EDA | LLM Raw | LLM Filtered | Filtered vs Raw |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | 0.7563 | 0.7641 | 0.7864 | 0.7752 | -0.0112 |
+
+Conclusion: filtering kept 564/571 raw paraphrases and removed only obvious
+QC risks. The filtered file still beats the no-augmentation and EDA 5% runs,
+but raw LLM remains the strongest 5% augmentation result.
+
+## Phase 7 Aggregation / Orchestration
+
+Aggregate whatever result artifacts exist under `results/logs/` and
+`results/predictions/`:
+
+```bash
+python scripts/aggregate_results.py
+```
+
+This writes `results/tables/main_results.csv`,
+`results/tables/main_results_runs.csv`, and `results/tables/main_results.md`.
+
+To plan or run remaining GPU experiments idempotently:
+
+```bash
+python -m src.experiments.run_all --dry-run
+python -m src.experiments.run_all --include-full-none
+```
+
+`run_all` skips existing artifacts and, by default, skips missing augmentation
+CSV files instead of failing the whole matrix.
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.

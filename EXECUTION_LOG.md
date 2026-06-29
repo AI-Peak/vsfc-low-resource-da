@@ -1125,3 +1125,72 @@ Local filtering validation:
 - keep rate: `0.9877`
 - kept label counts: `{0: 262, 1: 21, 2: 281}`
 - drop reasons: `too_long_relative=6`, `low_token_overlap=1`
+
+## Phase 6 Kaggle Result
+
+Command:
+
+```bash
+python scripts/phase6_filter.py --ratios 0.05 --seed 42 --overwrite
+```
+
+Result:
+
+| Ratio | None macro-F1 | EDA macro-F1 | LLM raw macro-F1 | LLM filtered macro-F1 | Delta vs raw |
+|---:|---:|---:|---:|---:|---:|
+| 0.05 | `0.7563` | `0.7641` | `0.7864` | `0.7752` | `-0.0112` |
+
+Filtering QC:
+
+- raw rows: `571`
+- kept rows: `564`
+- dropped rows: `7`
+- keep rate: `0.9877`
+- kept label counts: `{0: 262, 1: 21, 2: 281}`
+- drop reasons: `too_long_relative=6`, `low_token_overlap=1`
+
+Artifacts generated on Kaggle:
+
+- `data/augmented/llm_filtered_0.05_42.csv`
+- `results/tables/phase6_filter_qc_0.05_42.csv`
+- `results/logs/phobert_llm_paraphrase_filtered_0.05_42.json`
+- `results/predictions/phobert_llm_paraphrase_filtered_0.05_42.csv`
+- `results/tables/figures/phobert_llm_paraphrase_filtered_0.05_42_confusion_matrix.png`
+
+Conclusion:
+
+- Filtered LLM still improves over the 5% no-augmentation baseline
+  (`+0.0189`) and EDA baseline (`+0.0111`).
+- Filtering underperforms the raw LLM pilot by `0.0112` macro-F1.
+- The strongest observed 5% augmentation result remains Phase 5 raw LLM:
+  test macro-F1 `0.7864`.
+
+## Phase 7 Orchestration Implementation
+
+Remediation implemented:
+
+- Implemented `src/experiments/run_all.py`.
+  - Builds an idempotent PhoBERT experiment matrix.
+  - Skips existing prediction/metric artifacts by default.
+  - Skips missing augmentation CSVs by default so quota-limited LLM ratios do
+    not fail the whole run.
+  - Writes `results/tables/run_all_plan.csv`.
+- Added `scripts/aggregate_results.py`.
+  - Reads available metrics from `results/logs/*.json`.
+  - Falls back to `results/predictions/*.csv` when a JSON log is missing.
+  - Writes:
+    - `results/tables/main_results_runs.csv`
+    - `results/tables/main_results.csv`
+    - `results/tables/main_results.md`
+
+Next action on Kaggle after pulling:
+
+```bash
+python scripts/aggregate_results.py
+```
+
+Optional dry run for remaining GPU jobs:
+
+```bash
+python -m src.experiments.run_all --dry-run
+```
