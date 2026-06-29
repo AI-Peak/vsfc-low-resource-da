@@ -901,3 +901,59 @@ Next action:
 ```bash
 python scripts/phase3_sweep.py --stop-on-pass --neutral-loss-only
 ```
+
+## Phase 3 Kaggle Neutral-Loss Result
+
+Command:
+
+```bash
+python scripts/phase3_sweep.py --stop-on-pass --neutral-loss-only
+```
+
+Result:
+
+- `base_neutral_weight_115`: dev macro-F1 `0.8755`, test macro-F1 `0.8374`,
+  neutral-class test F1 `0.5936`.
+- `base_neutral_weight_130`: dev macro-F1 `0.8686`, test macro-F1 `0.8451`,
+  neutral-class test F1 `0.6227`.
+- `base_focal_gamma_075`: dev macro-F1 `0.8712`, test macro-F1 `0.8454`,
+  neutral-class test F1 `0.6221`.
+- `base_focal_gamma_075_neutral_weight_115`: dev macro-F1 `0.8708`,
+  test macro-F1 `0.8411`, neutral-class test F1 `0.6136`.
+- Phase 3 acceptance status: still failed gate.
+
+Conclusion:
+
+- The strongest observed Phase 3 no-augmentation baseline remains standard
+  PhoBERT-base with dev-tuned logit bias:
+  test macro-F1 `0.8478276168`.
+- Further last-mile attempts have not improved the neutral-class bottleneck.
+- To finish the project, Phase 3 is frozen as a documented near-gate baseline
+  and the workflow moves to Phase 4 EDA augmentation.
+
+## Phase 4 EDA Implementation
+
+Remediation implemented:
+
+- Implemented `src/augmentation/base.py` with reusable DataFrame augmentation
+  helpers and schema validation.
+- Implemented `src/augmentation/eda.py` with conservative Vietnamese EDA
+  operations. The default Phase 4 config uses phrase/synonym replacement and
+  leaves noisier insertion, swap, and deletion operations available but
+  disabled.
+- Added `scripts/generate_eda.py` to create
+  `data/augmented/eda_{ratio}_{seed}.csv`.
+- Added `scripts/phase4_eda.py` to generate EDA data and run PhoBERT EDA
+  experiments for `0.05`, `0.10`, and `0.20` ratios.
+
+Next action:
+
+```bash
+python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --overwrite
+```
+
+Optional matching low-resource no-augmentation baselines:
+
+```bash
+python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --include-baseline --overwrite
+```

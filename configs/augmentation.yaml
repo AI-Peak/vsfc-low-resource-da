@@ -5,9 +5,9 @@ methods:
   - llm_paraphrase_filtered
 eda:
   alpha_sr: 0.1
-  alpha_ri: 0.1
-  alpha_rs: 0.1
-  p_rd: 0.1
+  alpha_ri: 0.0
+  alpha_rs: 0.0
+  p_rd: 0.0
   num_aug: 1
 llm:
   model: "gemini-2.5-flash-lite"

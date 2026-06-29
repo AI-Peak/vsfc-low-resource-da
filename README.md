@@ -83,6 +83,34 @@ python scripts/phase3_sweep.py --stop-on-pass --neutral-loss-only
 When the sweep prints `Final gate command to run`, run that command once to
 write the accepted `results/logs/phobert_none_1.00_42.json` artifact.
 
+The strongest Phase 3 no-augmentation result observed so far is the standard
+PhoBERT-base run with dev-tuned logit bias: test macro-F1 `0.8478`. If all
+recovery sweeps miss the `0.85` gate, freeze this as a documented near-gate
+baseline and continue to Phase 4.
+
+## Phase 4 EDA Augmentation
+
+Generate conservative EDA files for the low-resource ratios. The default Phase
+4 EDA config uses phrase/synonym replacement and keeps noisier insertion,
+swap, and deletion operations disabled.
+
+```bash
+python scripts/generate_eda.py --ratios 0.05 0.10 0.20 --seed 42 --force
+```
+
+On GPU, run the EDA PhoBERT experiments:
+
+```bash
+python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --overwrite
+```
+
+To also run the matching no-augmentation low-resource PhoBERT baselines for
+comparison, add `--include-baseline`:
+
+```bash
+python scripts/phase4_eda.py --ratios 0.05 0.10 0.20 --seed 42 --include-baseline --overwrite
+```
+
 ## Directory Overview
 
 - `configs/`: shared experiment and model settings.
